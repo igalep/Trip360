@@ -5,7 +5,7 @@
 import React from 'react';
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import Dashboard from '../src/components/Dashboard';
+import Dashboard from '../../src/components/Dashboard';
 
 // Mock data
 const mockTrips = [

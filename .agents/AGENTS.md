@@ -15,6 +15,7 @@ High-performance, full-stack personal financial management with a minimalist UI 
 - **Build:** npm run build (Frontend compile to /dist).
 - **Production:** npm start (Run production server).
 - **Database:** npm run db:init (Initialize schema.sql).
+- **Test:** npm test (Run Jest integration and validation tests sequentially).
 - **Sync:** npx cap sync (Web to Mobile).
 
 ## 📜 Core Mandates
@@ -49,3 +50,12 @@ High-performance, full-stack personal financial management with a minimalist UI 
   - **Repository Layer:** Raw SQL and data access.
   - **Service Layer:** Business logic and external API orchestration.
   - **Controller/Route Layer:** Request parsing and response mapping.
+
+### 🧪 Testing & Quality Assurance
+
+- **Test Location:** All tests must reside in the `/tests` directory at the project root:
+  - **Backend Server Tests:** Located under `/tests/server/`. Test files should end with `.test.ts`.
+  - **Frontend UI Tests:** Located under `/tests/ui/`. Test files should end with `.test.tsx` (using JSDOM environment).
+- **Test Database Isolation:** Tests must use a separate SQLite test database file (configured via environment variable `TURSO_DATABASE_URL=file:test.db`).
+- **Sequential Execution:** Tests interacting with the database must run sequentially (using `--runInBand` flag) to prevent SQLite concurrency lock issues.
+
