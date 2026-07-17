@@ -111,4 +111,41 @@ describe('LedgerView Component', () => {
     expect(screen.getByText('Flight')).toBeTruthy();
     expect(screen.getAllByText('$350.00').length).toBeGreaterThan(0);
   });
+
+  it('should allow adding a custom category', async () => {
+    const catMock = jest.fn().mockImplementation((url: any, options?: any) => {
+      if (options && options.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'success', data: { id: 'cat-new', name: 'Gift' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: mockTripDetails }),
+      });
+    });
+    
+    await act(async () => {
+      render(<LedgerView tripId="trip-1" onBack={() => {}} />);
+    });
+
+    (window as any).fetch = catMock;
+
+    // Click "+ Add Custom"
+    const addCustomBtn = screen.getByText('+ Add Custom');
+    fireEvent.click(addCustomBtn);
+
+    // Fill in name
+    const nameInput = screen.getByPlaceholderText('Category Name');
+    fireEvent.change(nameInput, { target: { value: 'Gift' } });
+
+    // Click "Save"
+    const saveBtn = screen.getByText('Save');
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(catMock).toHaveBeenCalled();
+  });
 });
