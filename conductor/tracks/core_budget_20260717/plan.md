@@ -22,18 +22,18 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
 - [x] Task: Conductor - User Manual Verification 'Phase 1: DB Schema & Backend Setup' (Protocol in workflow.md) [be85c50]
 
 ## Phase 2: Core Frontend Views
-- [~] Task: Dashboard Component
-    - [ ] Write failing Jest/React-testing-library tests for Dashboard
-    - [ ] Implement src/components/Dashboard.tsx with trip cards, destination headers, and nights calculation
-    - [ ] Verify Dashboard tests pass
-- [ ] Task: Ledger Component Base & Quick Logging
-    - [ ] Write failing Jest/React-testing-library tests for Ledger entry form
-    - [ ] Implement src/components/LedgerView.tsx entry form (chips, amount converter, cash/card segmented toggle)
-    - [ ] Verify Ledger entry form tests pass
-- [ ] Task: Ledger Summary Matrix & Sticky Footer
-    - [ ] Write failing Jest/React-testing-library tests for summary table & calculations
-    - [ ] Implement src/components/LedgerView.tsx summary matrix (category lists, Base Overhead block, Grand Total block)
-    - [ ] Verify summary table tests pass
+- [x] Task: Dashboard Component [7b9194a]
+    - [x] Write failing Jest/React-testing-library tests for Dashboard
+    - [x] Implement src/components/Dashboard.tsx with trip cards, destination headers, and nights calculation
+    - [x] Verify Dashboard tests pass
+- [x] Task: Ledger Component Base & Quick Logging [42b320d]
+    - [x] Write failing Jest/React-testing-library tests for Ledger entry form
+    - [x] Implement src/components/LedgerView.tsx entry form (chips, amount converter, cash/card segmented toggle)
+    - [x] Verify Ledger entry form tests pass
+- [x] Task: Ledger Summary Matrix & Sticky Footer [42b320d]
+    - [x] Write failing Jest/React-testing-library tests for summary table & calculations
+    - [x] Implement src/components/LedgerView.tsx summary matrix (category lists, Base Overhead block, Grand Total block)
+    - [x] Verify summary table tests pass
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core Frontend Views' (Protocol in workflow.md)
 
 ## Phase 3: Custom Sections & Aesthetics
