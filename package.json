@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "db:init": "npx tsx src/server/db-init.ts",
     "test": "TURSO_DATABASE_URL=file:test.db jest --runInBand",
-    "server": "npx tsx src/server/index.ts"
+    "server": "npx tsx watch src/server/index.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
@@ -37,6 +37,7 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "nodemon": "^3.1.14"
   }
 }

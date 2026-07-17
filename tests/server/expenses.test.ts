@@ -4,9 +4,11 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import app from '../../src/server/server';
 import { db } from '../../src/server/db';
+import { initLoaders } from '../../src/server/loaders';
 
 describe('Expenses & Categories Routes API', () => {
   beforeAll(async () => {
+    await initLoaders({ app });
     // Run schema.sql to ensure test DB structure is clean
     const schemaSql = readFileSync(join(process.cwd(), 'schema.sql'), 'utf8');
     await db.executeMultiple(schemaSql);
