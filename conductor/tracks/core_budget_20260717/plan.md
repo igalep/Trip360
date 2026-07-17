@@ -37,10 +37,10 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core Frontend Views' (Protocol in workflow.md)
 
 ## Phase 3: Custom Sections & Aesthetics
-- [ ] Task: Custom Sections Addition
-    - [ ] Write failing Jest/React-testing-library tests for Custom Section modal
-    - [ ] Implement category creation dialog and save custom category to DB
-    - [ ] Verify custom section tests pass
+- [x] Task: Custom Sections Addition [9eaa59f]
+    - [x] Write failing Jest/React-testing-library tests for Custom Section modal
+    - [x] Implement category creation dialog and save custom category to DB
+    - [x] Verify custom section tests pass
 - [ ] Task: Aesthetic Polish & Dark Theme
     - [ ] Implement dark-mode styling rules in src/index.css
     - [ ] Verify validation error outlines (red) and highlights (variable yellow, shopping green, overage red)
