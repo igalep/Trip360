@@ -11,7 +11,7 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
     - [ ] Write failing Jest tests for validation schemas (Zod)
     - [ ] Implement Express app src/server/server.ts and Zod validation middleware
     - [ ] Verify validation tests pass
-- [ ] Task: Trips Route Implementation
+- [x] Task: Trips Route Implementation [be557a1]
     - [ ] Write failing Jest tests for GET /api/trips and POST /api/trips
     - [ ] Implement routes and repository queries for trips
     - [ ] Verify trips API tests pass
