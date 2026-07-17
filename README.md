@@ -1,32 +1,57 @@
-# React + TypeScript + Vite
+# BudgetControl - Personal Finance Manager
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A high-performance personal financial manager built with React 19, Vite, Express, and Turso/SQLite (libSQL). It features a premium, responsive interface tailored for tracking travel budgets, category lists, custom metrics, and mobile integration.
 
-Currently, two official plugins are available:
+## 🚀 Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Follow these steps to initialize the database and run the application locally.
 
-## React Compiler
+### 1. Prerequisites
+Ensure you have [Node.js](https://nodejs.org/) installed (v18+ recommended).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 2. Install Dependencies
+Run the following command in the project root to install the packages:
+```bash
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### 3. Initialize the Database
+SeedTest data and create the SQLite database tables by running:
+```bash
+npm run db:init
+```
+This generates the local SQLite files and seeds initial defaults.
+
+### 4. Run the Dev Server
+Launch the backend server alongside Vite's Hot Module Replacement (HMR) for the frontend:
+```bash
+npm run server
+```
+Once started, the application will be available at:
+* Frontend & Backend: [http://localhost:3000](http://localhost:3000)
+
+---
+
+## ⚙️ Core Commands
+
+* **Launch Dev Environment**: `npm run server`
+* **Production Build**: `npm run build` (compiles static frontend to `/dist`)
+* **Production Boot**: `npm start` (runs the server in production mode)
+* **Reinitialize Database**: `npm run db:init`
+* **Sync Web App to Mobile Wrapper**: `npx cap sync` (updates Capacitor platform bundles)
+
+---
+
+## 🧪 Testing & Validation
+
+To run all backend endpoint integration tests and frontend UI tests sequentially (using `--runInBand` to avoid SQLite concurrency locks):
+```bash
+./run-tests.sh
+```
+Or alternatively:
+```bash
+npm test
+```
+All test files are separated:
+* **Backend Endpoint Tests**: `/tests/server/`
+* **Frontend UI Tests**: `/tests/ui/`
