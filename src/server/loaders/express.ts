@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import tripsRouter from '../routes/trips.routes';
 import expensesRouter from '../routes/expenses.routes';
 import { logger } from '../../utils/logger';
@@ -14,6 +15,23 @@ export default async function expressLoader({ app }: { app: express.Application 
   // Default health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // Serve static assets from frontend build directory in production
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+
+  // SPA fallback routing
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) {
+        // Safe fallback if build doesn't exist
+        next();
+      }
+    });
   });
 
   // Global error handler middleware
