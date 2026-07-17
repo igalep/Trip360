@@ -28,7 +28,7 @@ Launch the backend server alongside Vite's Hot Module Replacement (HMR) for the 
 npm run server
 ```
 Once started, the application will be available at:
-* Frontend & Backend: [http://localhost:3000](http://localhost:3000)
+* Frontend & Backend: [http://localhost:3002](http://localhost:3002)
 
 ---
 
