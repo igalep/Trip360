@@ -3,7 +3,7 @@
 This document outlines the detailed tasks and phases to implement the Core Trip Budget Tracker.
 
 ## Phase 1: DB Schema & Backend Setup
-- [ ] Task: Database Setup
+- [x] Task: Database Setup [07cfcbc]
     - [ ] Write schema.sql definition file
     - [ ] Setup src/server/db.ts connection to Turso DB/SQLite
 - [ ] Task: Express Server Setup & Route Validation
