@@ -2,7 +2,7 @@
 
 This document outlines the detailed tasks and phases to implement the Core Trip Budget Tracker.
 
-## Phase 1: DB Schema & Backend Setup
+## Phase 1: DB Schema & Backend Setup [checkpoint: be85c50]
 - [x] Task: Database Setup [07cfcbc]
     - [ ] Write schema.sql definition file
     - [ ] Setup src/server/db.ts connection to Turso DB/SQLite
@@ -19,7 +19,7 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
     - [ ] Write failing Jest tests for GET /api/trips/:id, POST /api/expenses, and DELETE /api/expenses/:id
     - [ ] Implement routes and repository queries for expenses and categories
     - [ ] Verify expense API tests pass
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: DB Schema & Backend Setup' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: DB Schema & Backend Setup' (Protocol in workflow.md) [be85c50]
 
 ## Phase 2: Core Frontend Views
 - [ ] Task: Dashboard Component
