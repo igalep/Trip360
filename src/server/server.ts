@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import tripsRouter from './routes/trips.routes';
+import expensesRouter from './routes/expenses.routes';
 
 const app = express();
 
@@ -8,6 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/trips', tripsRouter);
+app.use('/api/expenses', expensesRouter);
 
 // Default health check endpoint
 app.get('/api/health', (req, res) => {
