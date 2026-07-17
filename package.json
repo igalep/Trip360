@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "db:init": "npx tsx src/server/db-init.ts",
-    "test": "jest"
+    "test": "TURSO_DATABASE_URL=file:test.db jest"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
