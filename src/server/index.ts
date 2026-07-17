@@ -1,4 +1,5 @@
 import app from './server';
+import { logger } from '../utils/logger';
 
 const port = process.env.PORT || 3001;
 
@@ -15,15 +16,12 @@ async function startServer() {
   clearInterval(interval);
   
   app.listen(port, () => {
-    const timestamp = new Date().toLocaleString();
     // Clear line and print final status
     process.stdout.write('\r\x1b[K');
-    console.log(`\x1b[32m✔ [BudgetControl Server] Running successfully!\x1b[0m`);
-    console.log(`\x1b[34mℹ Address:\x1b[0m http://localhost:${port}`);
-    console.log(`\x1b[34mℹ Started at:\x1b[0m ${timestamp}`);
+    logger.animation(`BudgetControl Server running on http://localhost:${port}`);
   });
 }
 
 startServer().catch((err) => {
-  console.error('Failed to start server:', err);
+  logger.error('Failed to start server:', err);
 });

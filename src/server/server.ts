@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import tripsRouter from './routes/trips.routes';
 import expensesRouter from './routes/expenses.routes';
+import { logger } from '../utils/logger';
 
 const app = express();
 
@@ -18,7 +19,7 @@ app.get('/api/health', (req, res) => {
 
 // Global error handler middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Server Error:', err);
+  logger.error('Server Error:', err);
   res.status(err.status || 500).json({
     status: 'error',
     message: err.message || 'Internal Server Error',

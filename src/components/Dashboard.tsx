@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 
 export interface Trip {
   id: string;
@@ -70,7 +71,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         setTrips(json.data);
       }
     } catch (error) {
-      console.error('Failed to load trips:', error);
+      logger.error('Failed to load trips:', error);
     } finally {
       setLoading(false);
     }
@@ -131,7 +132,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         setErrors(serverErrors);
       }
     } catch (error) {
-      console.error('Failed to create trip:', error);
+      logger.error('Failed to create trip:', error);
     }
   };
 
