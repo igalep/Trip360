@@ -1,12 +1,38 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>budgetcontrol</title>
+    <title>BudgetControl</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "bg-app": "#121214",
+              "text-main": "#f3f4f6",
+              "accent-green": "#10B981",
+              "surface-card": "#1E1F26",
+              "outline-variant": "#2e303a",
+              "expense-variable-bg": "rgba(253, 224, 71, 0.08)",
+              "expense-variable-border": "rgba(253, 224, 71, 0.2)",
+              "expense-discretionary-bg": "rgba(16, 185, 129, 0.08)",
+              "expense-discretionary-border": "rgba(16, 185, 129, 0.2)",
+              "expense-overage-bg": "rgba(239, 68, 68, 0.08)",
+              "expense-overage-border": "rgba(239, 68, 68, 0.2)",
+            }
+          }
+        }
+      }
+    </script>
   </head>
-  <body>
+  <body class="bg-bg-app text-text-main flex flex-col min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
