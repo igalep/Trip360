@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement core Trip Budget Tracker (Turso DB, Express API, Dashboard, and Active Ledger)**
+- [~] **Track: Implement core Trip Budget Tracker (Turso DB, Express API, Dashboard, and Active Ledger)**
   *Link: [./tracks/core_budget_20260717/](./tracks/core_budget_20260717/)*

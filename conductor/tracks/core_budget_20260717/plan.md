@@ -22,7 +22,7 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
 - [x] Task: Conductor - User Manual Verification 'Phase 1: DB Schema & Backend Setup' (Protocol in workflow.md) [be85c50]
 
 ## Phase 2: Core Frontend Views
-- [ ] Task: Dashboard Component
+- [~] Task: Dashboard Component
     - [ ] Write failing Jest/React-testing-library tests for Dashboard
     - [ ] Implement src/components/Dashboard.tsx with trip cards, destination headers, and nights calculation
     - [ ] Verify Dashboard tests pass
