@@ -40,15 +40,15 @@ describe('Dashboard Component', () => {
       render(<Dashboard onSelectTrip={() => {}} />);
     });
 
-    expect(screen.getByText('My Trips')).toBeTruthy();
+    expect(screen.getByText('Recent Trips')).toBeTruthy();
     
     // Await async items rendered inside useEffect fetch
     const tripName = await screen.findByText('Baku Summer');
     expect(tripName).toBeTruthy();
     expect(screen.getByText('Baku, Azerbaijan')).toBeTruthy();
     expect(screen.getByText('7 nights')).toBeTruthy();
-    expect(screen.getByText('$350')).toBeTruthy();
-    expect(screen.getByText('/ $1500')).toBeTruthy();
+    expect(screen.getAllByText('$350.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('Budget: $1,500.00')).toBeTruthy();
   });
 
   it('should open the Create Trip modal when clicking create button', async () => {
