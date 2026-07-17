@@ -191,11 +191,11 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
 
   const getCategoryColorClass = (groupName: string) => {
     switch (groupName.toLowerCase()) {
-      case 'fixed': return 'bg-zinc-800 border-zinc-700';
-      case 'transit': return 'bg-yellow-900/20 border-yellow-800 text-yellow-500';
-      case 'living': return 'bg-orange-950/20 border-orange-850 text-orange-500';
-      case 'leisure': return 'bg-emerald-950/20 border-emerald-800 text-emerald-500';
-      default: return 'bg-zinc-800 border-zinc-750 text-zinc-400';
+      case 'fixed': return 'bg-zinc-900 border-b border-zinc-800 text-zinc-400';
+      case 'transit': return 'bg-expense-variable-bg border-b border-expense-variable-border text-yellow-500';
+      case 'living': return 'bg-zinc-900 border-b border-zinc-800 text-orange-500';
+      case 'leisure': return 'bg-expense-discretionary-bg border-b border-expense-discretionary-border text-emerald-500';
+      default: return 'bg-zinc-900 border-b border-zinc-800 text-zinc-400';
     }
   };
 
