@@ -15,7 +15,7 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
     - [ ] Write failing Jest tests for GET /api/trips and POST /api/trips
     - [ ] Implement routes and repository queries for trips
     - [ ] Verify trips API tests pass
-- [ ] Task: Expenses & Categories Route Implementation
+- [x] Task: Expenses & Categories Route Implementation [a0a210a]
     - [ ] Write failing Jest tests for GET /api/trips/:id, POST /api/expenses, and DELETE /api/expenses/:id
     - [ ] Implement routes and repository queries for expenses and categories
     - [ ] Verify expense API tests pass
