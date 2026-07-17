@@ -6,7 +6,7 @@ This document outlines the detailed tasks and phases to implement the Core Trip 
 - [x] Task: Database Setup [07cfcbc]
     - [ ] Write schema.sql definition file
     - [ ] Setup src/server/db.ts connection to Turso DB/SQLite
-- [ ] Task: Express Server Setup & Route Validation
+- [x] Task: Express Server Setup & Route Validation [bfecba5]
     - [ ] Setup Jest testing config for backend
     - [ ] Write failing Jest tests for validation schemas (Zod)
     - [ ] Implement Express app src/server/server.ts and Zod validation middleware
