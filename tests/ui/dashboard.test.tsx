@@ -100,4 +100,68 @@ describe('Dashboard Component', () => {
     
     confirmSpy.mockRestore();
   });
+
+  it('should display correct status label (Future, Active, Past) based on dates', async () => {
+    const getRelativeDateString = (daysOffset: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + daysOffset);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const testTrips = [
+      {
+        id: 'trip-future',
+        name: 'Future Trip',
+        destination: 'Destination A',
+        start_date: getRelativeDateString(5),
+        end_date: getRelativeDateString(10),
+        nights: 5,
+        base_currency: 'USD',
+        budget_limit: 1000,
+        total_spent: 0,
+      },
+      {
+        id: 'trip-active',
+        name: 'Active Trip',
+        destination: 'Destination B',
+        start_date: getRelativeDateString(-2),
+        end_date: getRelativeDateString(2),
+        nights: 4,
+        base_currency: 'USD',
+        budget_limit: 1000,
+        total_spent: 0,
+      },
+      {
+        id: 'trip-past',
+        name: 'Past Trip',
+        destination: 'Destination C',
+        start_date: getRelativeDateString(-10),
+        end_date: getRelativeDateString(-5),
+        nights: 5,
+        base_currency: 'USD',
+        budget_limit: 1000,
+        total_spent: 0,
+      },
+    ];
+
+    const mockFetch = jest.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: testTrips }),
+      })
+    );
+    (window as any).fetch = mockFetch;
+    (global as any).fetch = mockFetch;
+
+    await act(async () => {
+      render(<Dashboard onSelectTrip={() => {}} />);
+    });
+
+    expect(screen.getByTestId('trip-status-trip-future').textContent).toBe('Future');
+    expect(screen.getByTestId('trip-status-trip-active').textContent).toBe('Active');
+    expect(screen.getByTestId('trip-status-trip-past').textContent).toBe('Past');
+  });
 });
