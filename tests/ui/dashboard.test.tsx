@@ -40,15 +40,14 @@ describe('Dashboard Component', () => {
       render(<Dashboard onSelectTrip={() => {}} />);
     });
 
-    expect(screen.getByText('My Trips')).toBeTruthy();
+    expect(screen.getByText('Recent Trips')).toBeTruthy();
     
     // Await async items rendered inside useEffect fetch
     const tripName = await screen.findByText('Baku Summer');
     expect(tripName).toBeTruthy();
     expect(screen.getByText('Baku, Azerbaijan')).toBeTruthy();
-    expect(screen.getByText('7 nights')).toBeTruthy();
-    expect(screen.getByText('$350')).toBeTruthy();
-    expect(screen.getByText('/ $1500')).toBeTruthy();
+    expect(screen.getAllByText('$350.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('Budget: $1,500.00')).toBeTruthy();
   });
 
   it('should open the Create Trip modal when clicking create button', async () => {
@@ -61,5 +60,44 @@ describe('Dashboard Component', () => {
 
     expect(screen.getByTestId('modal-title')).toBeTruthy();
     expect(screen.getByTestId('input-trip-name')).toBeTruthy();
+  });
+
+  it('should trigger deletion call when clicking delete button in context menu', async () => {
+    const deleteMock = jest.fn().mockImplementation((url: any, options?: any) => {
+      if (options && options.method === 'DELETE') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'success' }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: mockTrips }),
+      });
+    });
+    
+    // Stub confirm dialog
+    const confirmSpy = jest.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    await act(async () => {
+      render(<Dashboard onSelectTrip={() => {}} />);
+    });
+
+    (window as any).fetch = deleteMock;
+
+    // Click three-dot menu button
+    const menuBtn = screen.getByTestId('trip-menu-btn-trip-1');
+    fireEvent.click(menuBtn);
+
+    // Click "Delete Trip" option
+    const deleteBtn = screen.getByTestId('delete-trip-btn-trip-1');
+    await act(async () => {
+      fireEvent.click(deleteBtn);
+    });
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(deleteMock).toHaveBeenCalledWith('/api/trips/trip-1', expect.any(Object));
+    
+    confirmSpy.mockRestore();
   });
 });

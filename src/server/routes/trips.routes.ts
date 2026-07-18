@@ -4,10 +4,11 @@ import { CreateTripSchema } from '../schemas/trip.schema';
 import { validateRequest } from '../middlewares/validation.middleware';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { logger } from '../../utils/logger';
 
 const router = Router();
 
-// Helper to determine destination cover illustration
+// Helper to determine destination cover illustration fallback
 const getDestinationImage = (destination: string): string => {
   const destLower = destination.toLowerCase();
   if (destLower.includes('baku')) return '/assets/destinations/baku.png';
@@ -17,6 +18,29 @@ const getDestinationImage = (destination: string): string => {
   if (destLower.includes('paris')) return '/assets/destinations/paris.png';
   if (destLower.includes('new york')) return '/assets/destinations/newyork.png';
   return '/assets/destinations/default.png';
+};
+
+// Async helper to search and retrieve a real photo from Wikipedia
+const fetchDestinationImage = async (destination: string): Promise<string> => {
+  try {
+    const query = encodeURIComponent(destination.split(',')[0].trim());
+    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&prop=pageimages&format=json&pithumbsize=600&gsrlimit=1`;
+    
+    const res = await fetch(url);
+    const json = await res.json();
+    
+    if (json.query && json.query.pages) {
+      const pages = json.query.pages;
+      const pageId = Object.keys(pages)[0];
+      const thumbnail = pages[pageId].thumbnail;
+      if (thumbnail && thumbnail.source) {
+        return thumbnail.source;
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to fetch destination image from Wikipedia:', error);
+  }
+  return getDestinationImage(destination);
 };
 
 // GET /api/trips - List all trips with total spent
@@ -96,7 +120,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
 // POST /api/trips - Create new trip & seed default categories
 router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, destination, start_date, end_date, budget_limit, base_currency } = req.body;
+    const { name, destination, start_date, end_date, budget_limit, base_currency, image_url } = req.body;
     
     const id = crypto.randomUUID();
     const startDateObj = new Date(start_date);
@@ -104,7 +128,7 @@ router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Reques
     const timeDiff = endDateObj.getTime() - startDateObj.getTime();
     const nights = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
     
-    const imageUrl = getDestinationImage(destination);
+    const imageUrl = image_url?.trim() ? image_url.trim() : await fetchDestinationImage(destination);
     const budgetLimitVal = budget_limit ?? 1000.0;
     const baseCurrencyVal = base_currency ?? 'USD';
 
@@ -196,6 +220,40 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
         group_name: 'custom',
         is_default: 0,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/trips/:id - Delete a trip and its categories/expenses
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    // Verify trip exists
+    const tripResult = await db.execute({
+      sql: 'SELECT id FROM trips WHERE id = ?',
+      args: [String(id)],
+    });
+    
+    if (tripResult.rows.length === 0) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Trip not found',
+      });
+      return;
+    }
+    
+    // Delete trip (cascade deletes categories and expenses)
+    await db.execute({
+      sql: 'DELETE FROM trips WHERE id = ?',
+      args: [String(id)],
+    });
+    
+    res.json({
+      status: 'success',
+      message: 'Trip deleted successfully',
     });
   } catch (error) {
     next(error);

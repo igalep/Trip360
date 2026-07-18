@@ -83,4 +83,44 @@ describe('Trips Routes API', () => {
       expect(response.body.data[0].name).toBe('Georgia Trip');
     });
   });
+
+  describe('DELETE /api/trips/:id', () => {
+    it('should delete the trip and cascade delete categories/expenses', async () => {
+      // Seed a trip
+      await db.execute({
+        sql: 'INSERT INTO trips (id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        args: ['trip-del', 'Delete Me', 'Nowhere', '2026-09-01', '2026-09-05', 4, 'USD', 1000],
+      });
+      // Seed a category
+      await db.execute({
+        sql: 'INSERT INTO categories (id, trip_id, name, icon, group_name) VALUES (?, ?, ?, ?, ?)',
+        args: ['cat-del', 'trip-del', 'Flights', 'flight', 'fixed'],
+      });
+
+      const response = await request(app).delete('/api/trips/trip-del');
+
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe('success');
+
+      // Verify trip is deleted
+      const tripResult = await db.execute({
+        sql: 'SELECT id FROM trips WHERE id = ?',
+        args: ['trip-del'],
+      });
+      expect(tripResult.rows.length).toBe(0);
+
+      // Verify category is cascade deleted
+      const catResult = await db.execute({
+        sql: 'SELECT id FROM categories WHERE id = ?',
+        args: ['cat-del'],
+      });
+      expect(catResult.rows.length).toBe(0);
+    });
+
+    it('should return 404 if trip to delete is not found', async () => {
+      const response = await request(app).delete('/api/trips/trip-non-existent');
+      expect(response.status).toBe(404);
+      expect(response.body.status).toBe('error');
+    });
+  });
 });

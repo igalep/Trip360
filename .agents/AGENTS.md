@@ -22,7 +22,7 @@ High-performance, full-stack personal financial management with a minimalist UI 
 
 1.  **Intent Verification:** Do not implement any changes without a clear, explicit request from the user.
 2.  **Branch Isolation:** NEVER implement or modify code directly on the `main` branch. All work must be performed on a dedicated feature branch.
-3.  **Explicit Approval:** Do not commit any changes without specific user approval.
+3.  **Explicit Approval & Test-First Commits:** Never commit any changes by yourself. Before committing, you must run all tests, present the results to the user, and explicitly ask the user for permission to commit.
 4.  **Type Integrity:** Strict TypeScript only. NEVER use any casting on Request or Session. Use global augmentations in src/server/types/express.d.ts for req.userId.
 5.  **Security First:** Passwords hashed with SHA-256 + salt in-browser, then bcrypt on-server. All protected routes MUST use requireAuth middleware.
 6.  **UI Verification:** Every interactive element MUST have a unique data-testid (e.g., data-testid="submit-transaction").

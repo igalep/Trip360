@@ -78,13 +78,22 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
       const response = await fetch(`/api/trips/${tripId}`);
       const json = await response.json();
       if (json.status === 'success') {
-        setTrip(json.data.trip);
+        const loadedTrip = json.data.trip;
+        setTrip(loadedTrip);
         setCategories(json.data.categories);
         setExpenses(json.data.expenses);
         
         // Select first category by default if none selected
         if (json.data.categories.length > 0 && !selectedCategoryId) {
           setSelectedCategoryId(json.data.categories[0].id);
+        }
+
+        // Adjust default expense date if today is outside trip bounds
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (todayStr < loadedTrip.start_date || todayStr > loadedTrip.end_date) {
+          setExpenseDate(loadedTrip.start_date);
+        } else {
+          setExpenseDate(todayStr);
         }
       }
     } catch (error) {
@@ -342,6 +351,9 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
                       className="w-full bg-zinc-850 border border-zinc-800 rounded-lg p-2 text-xs text-white"
                       value={expenseDate}
                       onChange={(e) => setExpenseDate(e.target.value)}
+                      min={trip?.start_date}
+                      max={trip?.end_date}
+                      style={{ colorScheme: 'dark' }}
                     />
                   </div>
                   <div className="space-y-1">
