@@ -201,10 +201,20 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                   data-testid={`trip-card-${trip.id}`}
                   className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col transition-all active:scale-[0.98] cursor-pointer hover:border-zinc-700"
                 >
-                  {/* Banner Gradient representing Destination cover */}
-                  <div className="h-32 w-full relative bg-gradient-to-r from-emerald-950 to-zinc-900 flex items-end p-4">
-                    <div className="absolute inset-0 bg-black/40"></div>
-                    <div className="absolute top-3 left-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] tracking-wider uppercase font-bold">
+                  {/* Banner Image representing Destination cover */}
+                  <div className="h-32 w-full relative overflow-hidden bg-gradient-to-r from-emerald-950 to-zinc-900 flex items-end p-4">
+                    {trip.image_url && (
+                      <img
+                        src={trip.image_url}
+                        alt={trip.destination}
+                        className="absolute inset-0 w-full h-full object-cover z-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                    <div className="absolute top-3 left-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] tracking-wider uppercase font-bold z-10">
                       Active
                     </div>
                     <div className="relative z-10">
