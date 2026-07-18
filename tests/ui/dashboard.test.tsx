@@ -46,7 +46,6 @@ describe('Dashboard Component', () => {
     const tripName = await screen.findByText('Baku Summer');
     expect(tripName).toBeTruthy();
     expect(screen.getByText('Baku, Azerbaijan')).toBeTruthy();
-    expect(screen.getByText('7 nights')).toBeTruthy();
     expect(screen.getAllByText('$350.00').length).toBeGreaterThan(0);
     expect(screen.getByText('Budget: $1,500.00')).toBeTruthy();
   });

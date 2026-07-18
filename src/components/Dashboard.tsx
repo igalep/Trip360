@@ -30,6 +30,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
   const [endDate, setEndDate] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('1000');
   const [baseCurrency, setBaseCurrency] = useState('USD');
+  const [imageUrl, setImageUrl] = useState('');
 
   // Validation states
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,6 +87,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         end_date: endDate,
         budget_limit: Number(budgetLimit) || 1000.0,
         base_currency: baseCurrency,
+        image_url: imageUrl,
       };
 
       const response = await fetch('/api/trips', {
@@ -118,6 +120,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     setEndDate('');
     setBudgetLimit('1000');
     setBaseCurrency('USD');
+    setImageUrl('');
     setErrors({});
   };
 
@@ -130,6 +133,28 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     };
     const symbol = symbolMap[currency] || currency + ' ';
     return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatDateRange = (startStr: string, endStr: string) => {
+    try {
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return `${startStr} - ${endStr}`;
+      }
+      
+      const formatMonthDay = (date: Date) => {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+      };
+
+      const year = end.getUTCFullYear();
+      const startText = formatMonthDay(start);
+      const endText = formatMonthDay(end);
+      
+      return `${startText} - ${endText}, ${year}`;
+    } catch (e) {
+      return `${startStr} - ${endStr}`;
+    }
   };
 
   // YTD Stats calculations
@@ -202,7 +227,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                   className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col transition-all active:scale-[0.98] cursor-pointer hover:border-zinc-700"
                 >
                   {/* Banner Image representing Destination cover */}
-                  <div className="h-32 w-full relative overflow-hidden bg-gradient-to-r from-emerald-950 to-zinc-900 flex items-end p-4">
+                  <div className="h-40 w-full relative overflow-hidden bg-gradient-to-r from-emerald-950 to-zinc-900">
                     {trip.image_url && (
                       <img
                         src={trip.image_url}
@@ -213,44 +238,48 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                         }}
                       />
                     )}
-                    <div className="absolute inset-0 bg-black/40 z-0"></div>
-                    <div className="absolute top-3 left-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] tracking-wider uppercase font-bold z-10">
+                    <div className="absolute inset-0 bg-black/35 z-0"></div>
+                    <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider z-10">
                       Active
-                    </div>
-                    <div className="relative z-10">
-                      <span className="text-xs font-bold text-emerald-400 font-mono">{trip.nights} nights</span>
                     </div>
                   </div>
 
                   <div className="p-5 space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-md font-bold text-gray-200">{trip.name}</h3>
-                        <p className="text-xs text-zinc-500 mt-0.5">{trip.destination}</p>
-                        <p className="text-[10px] text-zinc-600 font-medium mt-1">📅 {trip.start_date} - {trip.end_date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[9px] tracking-wider font-semibold text-zinc-500 uppercase">Spent</p>
-                        <p className="text-sm font-bold text-gray-200 font-mono mt-0.5">
-                          {formatCurrency(spent, trip.base_currency)}
-                        </p>
-                      </div>
+                    {/* Row 1: Destination & SPENT */}
+                    <div className="flex justify-between items-baseline">
+                      <h3 className="text-base font-bold text-white">{trip.destination}</h3>
+                      <span className="text-xs font-bold text-zinc-500 tracking-wider uppercase">SPENT</span>
                     </div>
 
-                    {/* Progress Bar indicator */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-[10px] font-semibold">
-                        <span className={isOver ? 'text-red-400' : 'text-zinc-500'}>
+                    {/* Row 2: Dates/Name & Spent Amount */}
+                    <div className="flex justify-between items-baseline">
+                      <div className="flex flex-col">
+                        <p className="text-sm text-zinc-400">
+                          {formatDateRange(trip.start_date, trip.end_date)}
+                        </p>
+                        {trip.name && trip.name !== trip.destination && (
+                          <p className="text-xs text-zinc-500 mt-0.5">{trip.name}</p>
+                        )}
+                      </div>
+                      <p className="text-lg font-bold text-white font-mono leading-none">
+                        {formatCurrency(spent, trip.base_currency)}
+                      </p>
+                    </div>
+
+                    {/* Budget Indicator */}
+                    <div className="pt-2 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-semibold">
+                        <span className="text-zinc-500">
                           Budget: {formatCurrency(limit, trip.base_currency)}
                         </span>
-                        <span className={isOver ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}>
+                        <span className={isOver ? 'text-red-400 font-bold' : 'text-blue-500 font-bold'}>
                           {percent}%
                         </span>
                       </div>
-                      <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-1000 ${
-                            isOver ? 'bg-red-500' : 'bg-emerald-500'
+                            isOver ? 'bg-red-500' : 'bg-blue-600'
                           }`}
                           style={{ width: `${percent}%` }}
                         ></div>
@@ -402,6 +431,18 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                     <option value="GBP">GBP (£)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-zinc-500 font-semibold uppercase">Custom Image URL (Optional)</label>
+                <input
+                  type="text"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:ring-0"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/cover.jpg"
+                  data-testid="input-trip-image"
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">

@@ -7,6 +7,7 @@ export const CreateTripSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be YYYY-MM-DD'),
   budget_limit: z.number().positive().optional(),
   base_currency: z.string().length(3).optional().default('USD'),
+  image_url: z.string().optional(),
 });
 
 export type CreateTripInput = z.infer<typeof CreateTripSchema>;

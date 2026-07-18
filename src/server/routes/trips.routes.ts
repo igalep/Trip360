@@ -120,7 +120,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
 // POST /api/trips - Create new trip & seed default categories
 router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, destination, start_date, end_date, budget_limit, base_currency } = req.body;
+    const { name, destination, start_date, end_date, budget_limit, base_currency, image_url } = req.body;
     
     const id = crypto.randomUUID();
     const startDateObj = new Date(start_date);
@@ -128,7 +128,7 @@ router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Reques
     const timeDiff = endDateObj.getTime() - startDateObj.getTime();
     const nights = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
     
-    const imageUrl = await fetchDestinationImage(destination);
+    const imageUrl = image_url?.trim() ? image_url.trim() : await fetchDestinationImage(destination);
     const budgetLimitVal = budget_limit ?? 1000.0;
     const baseCurrencyVal = base_currency ?? 'USD';
 
