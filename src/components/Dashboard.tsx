@@ -158,7 +158,6 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
       USD: '$',
       EUR: '€',
       ILS: '₪',
-      GBP: '£',
     };
     const symbol = symbolMap[currency] || currency + ' ';
     return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -183,6 +182,22 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
       return `${startText} - ${endText}, ${year}`;
     } catch (e) {
       return `${startStr} - ${endStr}`;
+    }
+  };
+
+  const getTripStatus = (startDateStr: string, endDateStr: string): 'Future' | 'Active' | 'Past' => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    if (todayStr < startDateStr) {
+      return 'Future';
+    } else if (todayStr > endDateStr) {
+      return 'Past';
+    } else {
+      return 'Active';
     }
   };
 
@@ -268,9 +283,22 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                       />
                     )}
                     <div className="absolute inset-0 bg-black/35 z-0"></div>
-                    <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider z-10">
-                      Active
-                    </div>
+                    {(() => {
+                      const status = getTripStatus(trip.start_date, trip.end_date);
+                      const statusStyles = {
+                        Future: 'bg-indigo-600 text-white',
+                        Active: 'bg-emerald-600 text-white',
+                        Past: 'bg-zinc-800 border border-zinc-700 text-zinc-400',
+                      };
+                      return (
+                        <div
+                          className={`absolute top-4 left-4 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider z-10 ${statusStyles[status]}`}
+                          data-testid={`trip-status-${trip.id}`}
+                        >
+                          {status}
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -489,7 +517,6 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
                     <option value="ILS">ILS (₪)</option>
-                    <option value="GBP">GBP (£)</option>
                   </select>
                 </div>
               </div>
