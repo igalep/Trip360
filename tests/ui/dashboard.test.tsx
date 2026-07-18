@@ -61,4 +61,43 @@ describe('Dashboard Component', () => {
     expect(screen.getByTestId('modal-title')).toBeTruthy();
     expect(screen.getByTestId('input-trip-name')).toBeTruthy();
   });
+
+  it('should trigger deletion call when clicking delete button in context menu', async () => {
+    const deleteMock = jest.fn().mockImplementation((url: any, options?: any) => {
+      if (options && options.method === 'DELETE') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'success' }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: mockTrips }),
+      });
+    });
+    
+    // Stub confirm dialog
+    const confirmSpy = jest.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    await act(async () => {
+      render(<Dashboard onSelectTrip={() => {}} />);
+    });
+
+    (window as any).fetch = deleteMock;
+
+    // Click three-dot menu button
+    const menuBtn = screen.getByTestId('trip-menu-btn-trip-1');
+    fireEvent.click(menuBtn);
+
+    // Click "Delete Trip" option
+    const deleteBtn = screen.getByTestId('delete-trip-btn-trip-1');
+    await act(async () => {
+      fireEvent.click(deleteBtn);
+    });
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(deleteMock).toHaveBeenCalledWith('/api/trips/trip-1', expect.any(Object));
+    
+    confirmSpy.mockRestore();
+  });
 });

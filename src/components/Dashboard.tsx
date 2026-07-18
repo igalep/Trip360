@@ -22,6 +22,21 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  const handleDeleteTrip = async (tripId: string) => {
+    try {
+      const response = await fetch(`/api/trips/${tripId}`, {
+        method: 'DELETE',
+      });
+      const json = await response.json();
+      if (json.status === 'success') {
+        fetchTrips();
+      }
+    } catch (error) {
+      logger.error('Failed to delete trip:', error);
+    }
+  };
 
   // Form states
   const [name, setName] = useState('');
@@ -122,6 +137,20 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     setBaseCurrency('USD');
     setImageUrl('');
     setErrors({});
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (endDate && val > endDate) {
+      setEndDate(val);
+    }
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    if (startDate && val < startDate) {
+      setStartDate(val);
+    }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -242,6 +271,34 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                     <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider z-10">
                       Active
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(activeMenuId === trip.id ? null : trip.id);
+                      }}
+                      className="absolute top-4 right-4 p-1.5 bg-black/50 hover:bg-black/80 rounded-lg text-gray-300 hover:text-white z-20 border border-zinc-700 transition-colors"
+                      data-testid={`trip-menu-btn-${trip.id}`}
+                    >
+                      <span className="material-symbols-outlined text-sm font-bold">more_vert</span>
+                    </button>
+                    {activeMenuId === trip.id && (
+                      <div className="absolute top-12 right-4 w-32 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-30 py-1">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(null);
+                            if (confirm(`Are you sure you want to delete "${trip.name}"?`)) {
+                              await handleDeleteTrip(trip.id);
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-zinc-800 text-xs font-bold text-red-500 hover:text-red-400 flex items-center gap-2"
+                          data-testid={`delete-trip-btn-${trip.id}`}
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          Delete Trip
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-5 space-y-4">
@@ -381,7 +438,9 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                     type="date"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-emerald-500 focus:ring-0"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    max={endDate || undefined}
+                    style={{ colorScheme: 'dark' }}
                     data-testid="input-trip-start"
                   />
                   {errors.startDate && <span className="text-xs text-red-500">{errors.startDate}</span>}
@@ -393,7 +452,9 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                     type="date"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:border-emerald-500 focus:ring-0"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    min={startDate || undefined}
+                    style={{ colorScheme: 'dark' }}
                     data-testid="input-trip-end"
                   />
                   {errors.endDate && <span className="text-xs text-red-500">{errors.endDate}</span>}

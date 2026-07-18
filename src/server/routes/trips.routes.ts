@@ -226,4 +226,38 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
   }
 });
 
+// DELETE /api/trips/:id - Delete a trip and its categories/expenses
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    // Verify trip exists
+    const tripResult = await db.execute({
+      sql: 'SELECT id FROM trips WHERE id = ?',
+      args: [String(id)],
+    });
+    
+    if (tripResult.rows.length === 0) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Trip not found',
+      });
+      return;
+    }
+    
+    // Delete trip (cascade deletes categories and expenses)
+    await db.execute({
+      sql: 'DELETE FROM trips WHERE id = ?',
+      args: [String(id)],
+    });
+    
+    res.json({
+      status: 'success',
+      message: 'Trip deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
