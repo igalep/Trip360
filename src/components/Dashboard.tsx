@@ -39,7 +39,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     }
   };
 
-  // Form states
+  // Create Trip Form state
   const [name, setName] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -409,7 +409,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
               return (
                 <div
                   key={trip.id}
-                  onClick={() => onSelectTrip(trip.id)}
+                  onClick={() => onSelectTrip(trip.name)}
                   data-testid={`trip-card-${trip.id}`}
                   className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl flex flex-col transition-all active:scale-[0.98] cursor-pointer hover:border-zinc-700"
                 >

@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import { db } from '../db';
 import { CreateTripSchema } from '../schemas/trip.schema';
 import { validateRequest } from '../middlewares/validation.middleware';
@@ -70,14 +70,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction): Promise
   }
 });
 
-// GET /api/trips/:id - Retrieve trip details with categories and expenses
+// GET /api/trips/:id - Retrieve trip details with categories and expenses (supports ID, Name, or Slug)
 router.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
+    const identifier = String(id).trim();
+    const decodedIdentifier = decodeURIComponent(identifier);
     
     const tripResult = await db.execute({
-      sql: 'SELECT id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url FROM trips WHERE id = ?',
-      args: [String(id)],
+      sql: `SELECT id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url 
+            FROM trips 
+            WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
+      args: [identifier, decodedIdentifier, decodedIdentifier],
     });
     
     if (tripResult.rows.length === 0) {
@@ -88,9 +92,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
       return;
     }
     
+    const trip = tripResult.rows[0];
+    const realTripId = String(trip.id);
+    
     const categoriesResult = await db.execute({
       sql: 'SELECT id, trip_id, name, icon, group_name, is_default FROM categories WHERE trip_id = ?',
-      args: [String(id)],
+      args: [realTripId],
     });
     
     const expensesResult = await db.execute({
@@ -101,13 +108,13 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
             FROM expenses e
             LEFT JOIN categories c ON e.category_id = c.id
             WHERE e.trip_id = ?`,
-      args: [String(id)],
+      args: [realTripId],
     });
     
     res.json({
       status: 'success',
       data: {
-        trip: tripResult.rows[0],
+        trip,
         categories: categoriesResult.rows,
         expenses: expensesResult.rows,
       },
@@ -188,11 +195,13 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
   try {
     const { id } = req.params;
     const { name, icon } = req.body;
+    const identifier = String(id).trim();
+    const decodedIdentifier = decodeURIComponent(identifier);
     
-    // Verify trip exists
+    // Verify trip exists by ID, Name, or Slug
     const tripResult = await db.execute({
-      sql: 'SELECT id FROM trips WHERE id = ?',
-      args: [String(id)],
+      sql: `SELECT id FROM trips WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
+      args: [identifier, decodedIdentifier, decodedIdentifier],
     });
     
     if (tripResult.rows.length === 0) {
@@ -203,18 +212,19 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
       return;
     }
     
+    const realTripId = String(tripResult.rows[0].id);
     const catId = crypto.randomUUID();
     
     await db.execute({
       sql: 'INSERT INTO categories (id, trip_id, name, icon, group_name, is_default) VALUES (?, ?, ?, ?, ?, 0)',
-      args: [catId, String(id), name, icon, 'custom'],
+      args: [catId, realTripId, name, icon, 'custom'],
     });
     
     res.status(201).json({
       status: 'success',
       data: {
         id: catId,
-        trip_id: id,
+        trip_id: realTripId,
         name,
         icon,
         group_name: 'custom',
@@ -230,11 +240,13 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
+    const identifier = String(id).trim();
+    const decodedIdentifier = decodeURIComponent(identifier);
     
     // Verify trip exists
     const tripResult = await db.execute({
-      sql: 'SELECT id FROM trips WHERE id = ?',
-      args: [String(id)],
+      sql: `SELECT id FROM trips WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
+      args: [identifier, decodedIdentifier, decodedIdentifier],
     });
     
     if (tripResult.rows.length === 0) {
@@ -245,10 +257,12 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction): P
       return;
     }
     
+    const realTripId = String(tripResult.rows[0].id);
+
     // Delete trip (cascade deletes categories and expenses)
     await db.execute({
       sql: 'DELETE FROM trips WHERE id = ?',
-      args: [String(id)],
+      args: [realTripId],
     });
     
     res.json({

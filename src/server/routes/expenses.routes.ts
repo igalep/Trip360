@@ -14,10 +14,13 @@ router.post('/', validateRequest({ body: CreateExpenseSchema }), async (req: Req
       original_currency, conversion_rate, payment_method, description, date 
     } = req.body;
     
-    // Verify trip exists
+    const tripIdentifier = String(trip_id).trim();
+    const decodedTripIdentifier = decodeURIComponent(tripIdentifier);
+
+    // Verify trip exists by ID, Name, or Slug
     const tripResult = await db.execute({
-      sql: 'SELECT id FROM trips WHERE id = ?',
-      args: [String(trip_id)],
+      sql: `SELECT id FROM trips WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
+      args: [tripIdentifier, decodedTripIdentifier, decodedTripIdentifier],
     });
     
     if (tripResult.rows.length === 0) {
@@ -28,10 +31,15 @@ router.post('/', validateRequest({ body: CreateExpenseSchema }), async (req: Req
       return;
     }
 
-    // Verify category exists
+    const realTripId = String(tripResult.rows[0].id);
+
+    // Verify category exists by ID or Name
+    const categoryIdentifier = String(category_id).trim();
+    const decodedCategoryIdentifier = decodeURIComponent(categoryIdentifier);
+
     const categoryResult = await db.execute({
-      sql: 'SELECT id FROM categories WHERE id = ? AND trip_id = ?',
-      args: [String(category_id), String(trip_id)],
+      sql: `SELECT id FROM categories WHERE (id = ? OR LOWER(name) = LOWER(?)) AND trip_id = ?`,
+      args: [categoryIdentifier, decodedCategoryIdentifier, realTripId],
     });
     
     if (categoryResult.rows.length === 0) {
@@ -42,6 +50,7 @@ router.post('/', validateRequest({ body: CreateExpenseSchema }), async (req: Req
       return;
     }
 
+    const realCategoryId = String(categoryResult.rows[0].id);
     const id = crypto.randomUUID();
     const rate = conversion_rate ?? 1.0;
     
@@ -50,8 +59,8 @@ router.post('/', validateRequest({ body: CreateExpenseSchema }), async (req: Req
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         String(id), 
-        String(trip_id), 
-        String(category_id), 
+        realTripId, 
+        realCategoryId, 
         Number(amount), 
         Number(original_amount), 
         String(original_currency), 
@@ -66,8 +75,8 @@ router.post('/', validateRequest({ body: CreateExpenseSchema }), async (req: Req
       status: 'success',
       data: {
         id,
-        trip_id,
-        category_id,
+        trip_id: realTripId,
+        category_id: realCategoryId,
         amount,
         original_amount,
         original_currency,
