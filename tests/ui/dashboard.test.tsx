@@ -164,4 +164,83 @@ describe('Dashboard Component', () => {
     expect(screen.getByTestId('trip-status-trip-active').textContent).toBe('Active');
     expect(screen.getByTestId('trip-status-trip-past').textContent).toBe('Past');
   });
+
+  it('should render suggestions when typing in destination field and allow selection via keyboard', async () => {
+    jest.useFakeTimers();
+
+    await act(async () => {
+      render(<Dashboard onSelectTrip={() => {}} />);
+    });
+
+    // Open Modal
+    const createBtn = screen.getByTestId('create-trip-btn');
+    await act(async () => {
+      fireEvent.click(createBtn);
+    });
+
+    const destInput = screen.getByTestId('input-trip-destination') as HTMLInputElement;
+
+    // Type "Ba"
+    await act(async () => {
+      fireEvent.change(destInput, { target: { value: 'Ba' } });
+    });
+
+    // Fast-forward debounce timer (300ms)
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    // Check that suggestions list is rendered and contains "Baku, Azerbaijan"
+    const suggestionsList = screen.getByTestId('suggestions-list');
+    expect(suggestionsList).toBeTruthy();
+
+    const bakuSuggestion = screen.getByTestId('destination-suggestion-0');
+    expect(bakuSuggestion.textContent).toContain('Baku, Azerbaijan');
+
+    // Test Keyboard Navigation (ArrowDown to first option, Enter to select)
+    await act(async () => {
+      fireEvent.keyDown(destInput, { key: 'ArrowDown', code: 'ArrowDown' });
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(destInput, { key: 'Enter', code: 'Enter' });
+    });
+
+    // Suggestions list should close and input value should update to "Baku, Azerbaijan"
+    expect(screen.queryByTestId('suggestions-list')).toBeNull();
+    expect(destInput.value).toBe('Baku, Azerbaijan');
+
+    jest.useRealTimers();
+  });
+
+  it('should allow selecting suggestions via click', async () => {
+    jest.useFakeTimers();
+
+    await act(async () => {
+      render(<Dashboard onSelectTrip={() => {}} />);
+    });
+
+    const createBtn = screen.getByTestId('create-trip-btn');
+    await act(async () => {
+      fireEvent.click(createBtn);
+    });
+
+    const destInput = screen.getByTestId('input-trip-destination') as HTMLInputElement;
+
+    await act(async () => {
+      fireEvent.change(destInput, { target: { value: 'Ba' } });
+      jest.advanceTimersByTime(300);
+    });
+
+    const bakuSuggestion = screen.getByTestId('destination-suggestion-0');
+    
+    await act(async () => {
+      fireEvent.click(bakuSuggestion);
+    });
+
+    expect(screen.queryByTestId('suggestions-list')).toBeNull();
+    expect(destInput.value).toBe('Baku, Azerbaijan');
+
+    jest.useRealTimers();
+  });
 });

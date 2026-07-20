@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
+import { EXTERNAL_APIS } from '../utils/constants';
 
 export interface Trip {
   id: string;
@@ -47,12 +48,149 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [imageUrl, setImageUrl] = useState('');
 
+  // Autocomplete states
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
+
   // Validation states
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchTrips();
   }, []);
+
+  useEffect(() => {
+    if (!showModal) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+      return;
+    }
+
+    const query = destination.trim();
+    if (query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+      return;
+    }
+
+    if (selectedSuggestion === destination) {
+      return;
+    }
+
+    const mapboxToken = process.env.VITE_MAPBOX_ACCESS_TOKEN;
+
+    const staticSuggestions = [
+      'London, United Kingdom',
+      'Paris, France',
+      'New York, USA',
+      'Tokyo, Japan',
+      'Baku, Azerbaijan',
+      'Rome, Italy',
+      'Barcelona, Spain',
+      'Amsterdam, Netherlands',
+      'Berlin, Germany',
+      'Vienna, Austria',
+      'Madrid, Spain',
+      'Sydney, Australia',
+      'Singapore',
+      'Bangkok, Thailand',
+      'Toronto, Canada',
+      'Prague, Czech Republic',
+      'Budapest, Hungary',
+      'Jerusalem, Israel',
+      'Lisbon, Portugal',
+      'Dubai, UAE',
+    ];
+
+    const fetchSuggestions = async () => {
+      setIsLoadingSuggestions(true);
+      if (!mapboxToken) {
+        const filtered = staticSuggestions.filter(item =>
+          item.toLowerCase().includes(query.toLowerCase())
+        );
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+        setIsLoadingSuggestions(false);
+        return;
+      }
+
+      try {
+        const url = `${EXTERNAL_APIS.MAPBOX_PLACES_BASE_URL}/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&types=place,locality&limit=5`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Mapbox API error');
+        }
+        const data = await response.json();
+        const places = (data.features?.map((f: any) => {
+          const city = f.text;
+          const countryItem = f.context?.find((c: any) => c.id?.startsWith('country'));
+          if (city && countryItem?.text) {
+            return `${city}, ${countryItem.text}`;
+          }
+          if (f.place_name) {
+            const parts = f.place_name.split(',').map((p: string) => p.trim());
+            if (parts.length > 2) {
+              return `${parts[0]}, ${parts[parts.length - 1]}`;
+            }
+            return f.place_name;
+          }
+          return city || '';
+        }) || []) as string[];
+
+        const uniquePlaces = Array.from(new Set(places.filter(Boolean)));
+        setSuggestions(uniquePlaces);
+        setShowSuggestions(uniquePlaces.length > 0);
+      } catch (err) {
+        logger.error('Mapbox geocoding failed, falling back to static list:', err);
+        const filtered = staticSuggestions.filter(item =>
+          item.toLowerCase().includes(query.toLowerCase())
+        );
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [destination, showModal, selectedSuggestion]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestionIndex((prevIndex) =>
+        prevIndex < suggestions.length - 1 ? prevIndex + 1 : 0
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestionIndex((prevIndex) =>
+        prevIndex > 0 ? prevIndex - 1 : suggestions.length - 1
+      );
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
+        const selected = suggestions[activeSuggestionIndex];
+        setDestination(selected);
+        setSelectedSuggestion(selected);
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
+  };
 
   const fetchTrips = async () => {
     try {
@@ -137,6 +275,11 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     setBaseCurrency('USD');
     setImageUrl('');
     setErrors({});
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+    setIsLoadingSuggestions(false);
+    setSelectedSuggestion(null);
   };
 
   const handleStartDateChange = (val: string) => {
@@ -446,17 +589,61 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
                 {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 relative">
                 <label className="text-xs text-zinc-500 font-semibold uppercase">Destination</label>
-                <input
-                  type="text"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:ring-0"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="e.g. Baku, Azerbaijan"
-                  data-testid="input-trip-destination"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-sm text-white focus:border-emerald-500 focus:ring-0"
+                    value={destination}
+                    onChange={(e) => {
+                      setDestination(e.target.value);
+                      setSelectedSuggestion(null);
+                    }}
+                    onFocus={() => {
+                      if (suggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowSuggestions(false);
+                      }, 200);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="e.g. Baku, Azerbaijan"
+                    data-testid="input-trip-destination"
+                    autoComplete="off"
+                  />
+                  {isLoadingSuggestions && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
                 {errors.destination && <span className="text-xs text-red-500">{errors.destination}</span>}
+
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="absolute z-50 w-full bg-zinc-900 border border-zinc-800 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-2xl py-1" data-testid="suggestions-list">
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={suggestion}
+                        onClick={() => {
+                          setDestination(suggestion);
+                          setSelectedSuggestion(suggestion);
+                          setShowSuggestions(false);
+                          setActiveSuggestionIndex(-1);
+                        }}
+                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-zinc-800 transition-colors ${
+                          index === activeSuggestionIndex ? 'bg-zinc-800 text-emerald-400 font-semibold' : 'text-gray-300'
+                        }`}
+                        data-testid={`destination-suggestion-${index}`}
+                      >
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
