@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
+import { EXTERNAL_APIS } from '../utils/constants';
 
 export interface Trip {
   id: string;
@@ -119,15 +120,31 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
       }
 
       try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&types=place,locality&limit=5`;
+        const url = `${EXTERNAL_APIS.MAPBOX_PLACES_BASE_URL}/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&types=place,locality&limit=5`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error('Mapbox API error');
         }
         const data = await response.json();
-        const places = data.features?.map((f: any) => f.place_name) || [];
-        setSuggestions(places);
-        setShowSuggestions(places.length > 0);
+        const places = (data.features?.map((f: any) => {
+          const city = f.text;
+          const countryItem = f.context?.find((c: any) => c.id?.startsWith('country'));
+          if (city && countryItem?.text) {
+            return `${city}, ${countryItem.text}`;
+          }
+          if (f.place_name) {
+            const parts = f.place_name.split(',').map((p: string) => p.trim());
+            if (parts.length > 2) {
+              return `${parts[0]}, ${parts[parts.length - 1]}`;
+            }
+            return f.place_name;
+          }
+          return city || '';
+        }) || []) as string[];
+
+        const uniquePlaces = Array.from(new Set(places.filter(Boolean)));
+        setSuggestions(uniquePlaces);
+        setShowSuggestions(uniquePlaces.length > 0);
       } catch (err) {
         logger.error('Mapbox geocoding failed, falling back to static list:', err);
         const filtered = staticSuggestions.filter(item =>
