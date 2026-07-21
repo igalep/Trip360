@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import tripsRouter from '../routes/trips.routes';
 import expensesRouter from '../routes/expenses.routes';
+import currencyRouter from '../routes/currency.routes';
 import { logger } from '../../utils/logger';
 
 export default async function expressLoader({ app }: { app: express.Application }) {
@@ -11,9 +12,10 @@ export default async function expressLoader({ app }: { app: express.Application 
 
   app.use('/api/trips', tripsRouter);
   app.use('/api/expenses', expensesRouter);
+  app.use('/api/currencies', currencyRouter);
 
   // Default health check endpoint
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
@@ -35,7 +37,7 @@ export default async function expressLoader({ app }: { app: express.Application 
   });
 
   // Global error handler middleware
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     logger.error('Server Error:', err);
     res.status(err.status || 500).json({
       status: 'error',

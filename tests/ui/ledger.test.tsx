@@ -152,4 +152,50 @@ describe('LedgerView Component', () => {
 
     expect(catMock).toHaveBeenCalled();
   });
+
+  it('should support selecting foreign currency and show conversion live preview', async () => {
+    const multiCurrMock = jest.fn().mockImplementation((url: any, options?: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/api/currencies/rate')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'success', data: { rate: 3.65, from: 'USD', to: 'ILS' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          status: 'success',
+          data: {
+            ...mockTripDetails,
+            trip: { ...mockTripDetails.trip, base_currency: 'ILS' },
+          },
+        }),
+      });
+    });
+
+    (window as any).fetch = multiCurrMock;
+
+    await act(async () => {
+      render(<LedgerView tripId="trip-1" onBack={() => {}} />);
+    });
+
+    const currencySelect = screen.getByTestId('select-currency');
+    expect(currencySelect).toBeTruthy();
+
+    // Select USD as foreign currency for trip with base currency ILS
+    await act(async () => {
+      fireEvent.change(currencySelect, { target: { value: 'USD' } });
+    });
+
+    // Enter original amount in USD
+    const amountInput = screen.getByTestId('input-expense-amount');
+    await act(async () => {
+      fireEvent.change(amountInput, { target: { value: '100' } });
+    });
+
+    // Check preview rendered
+    expect(screen.getByTestId('currency-conversion-preview')).toBeTruthy();
+    expect(screen.getByText('Converted Total:')).toBeTruthy();
+  });
 });
