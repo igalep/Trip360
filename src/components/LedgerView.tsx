@@ -461,7 +461,15 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
 
             {/* Ledger Transactions Entries list */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Transactions</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Transactions</h3>
+                <span
+                  className="text-xs font-mono px-2 py-0.5 bg-zinc-800 rounded-full text-zinc-400 border border-zinc-700 font-semibold"
+                  data-testid="transactions-count"
+                >
+                  {expenses.length} {expenses.length === 1 ? 'transaction' : 'transactions'}
+                </span>
+              </div>
               {expenses.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">No transactions registered yet.</p>
               ) : (
