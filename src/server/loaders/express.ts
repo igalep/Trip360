@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import tripsRouter from '../routes/trips.routes';
 import expensesRouter from '../routes/expenses.routes';
+import currencyRouter from '../routes/currency.routes';
 import { logger } from '../../utils/logger';
 
 export default async function expressLoader({ app }: { app: express.Application }) {
@@ -11,6 +12,7 @@ export default async function expressLoader({ app }: { app: express.Application 
 
   app.use('/api/trips', tripsRouter);
   app.use('/api/expenses', expensesRouter);
+  app.use('/api/currencies', currencyRouter);
 
   // Default health check endpoint
   app.get('/api/health', (req, res) => {

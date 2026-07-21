@@ -43,6 +43,25 @@ interface LedgerViewProps {
   onSelectCategory?: (categoryName: string) => void;
 }
 
+const SUPPORTED_CURRENCIES = [
+  { code: 'ILS', symbol: '₪', name: 'Israeli Shekel (ILS)' },
+  { code: 'USD', symbol: '$', name: 'US Dollar (USD)' },
+  { code: 'EUR', symbol: '€', name: 'Euro (EUR)' },
+  { code: 'GBP', symbol: '£', name: 'British Pound (GBP)' },
+  { code: 'GEL', symbol: '₾', name: 'Georgian Lari (GEL)' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar (CAD)' },
+  { code: 'AUD', symbol: 'AU$', name: 'Australian Dollar (AUD)' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen (JPY)' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc (CHF)' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham (AED)' },
+];
+
+export const getCurrencySymbol = (code?: string): string => {
+  if (!code) return '$';
+  const found = SUPPORTED_CURRENCIES.find((c) => c.code.toUpperCase() === code.toUpperCase());
+  return found ? found.symbol : code;
+};
+
 export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerViewProps) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -56,10 +75,18 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
 
   // New Expense form states
   const [amount, setAmount] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [conversionRate, setConversionRate] = useState(1.0);
+  const [showRateEdit, setShowRateEdit] = useState(false);
+  const [fetchingRate, setFetchingRate] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [description, setDescription] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Post-purchase Rate Editing states
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editingRateValue, setEditingRateValue] = useState<string>('');
 
   // Custom Category form states
   const [showCustomCatForm, setShowCustomCatForm] = useState(false);
@@ -79,11 +106,16 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
       const response = await fetch(`/api/trips/${tripId}`);
       const json = await response.json();
       if (json.status === 'success') {
-        const loadedTrip = json.data.trip;
+        const loadedTrip: Trip = json.data.trip;
         setTrip(loadedTrip);
         setCategories(json.data.categories);
         setExpenses(json.data.expenses);
         
+        // Select trip's base currency by default
+        if (loadedTrip.base_currency) {
+          setSelectedCurrency(loadedTrip.base_currency);
+        }
+
         // Select first category by default if none selected
         if (json.data.categories.length > 0 && !selectedCategoryId) {
           setSelectedCategoryId(json.data.categories[0].id);
@@ -104,6 +136,32 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
     }
   };
 
+  // Dynamic Exchange Rate Fetching
+  useEffect(() => {
+    const fetchRate = async () => {
+      const baseCurr = trip?.base_currency || 'USD';
+      if (!selectedCurrency || selectedCurrency.toUpperCase() === baseCurr.toUpperCase()) {
+        setConversionRate(1.0);
+        return;
+      }
+
+      try {
+        setFetchingRate(true);
+        const res = await fetch(`/api/currencies/rate?from=${selectedCurrency}&to=${baseCurr}&date=${expenseDate}`);
+        const data = await res.json();
+        if (data.status === 'success' && typeof data.data.rate === 'number') {
+          setConversionRate(data.data.rate);
+        }
+      } catch (err) {
+        logger.error('Failed to fetch exchange rate:', err);
+      } finally {
+        setFetchingRate(false);
+      }
+    };
+
+    fetchRate();
+  }, [selectedCurrency, trip?.base_currency, expenseDate]);
+
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveCatId = selectedCategoryId || (categories.length > 0 ? categories[0].id : '');
@@ -121,13 +179,18 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
     }
 
     try {
+      const baseCurr = trip?.base_currency || 'USD';
+      const origAmount = Number(amount);
+      const rate = selectedCurrency.toUpperCase() === baseCurr.toUpperCase() ? 1.0 : Number(conversionRate);
+      const computedAmountInBase = Number((origAmount * rate).toFixed(2));
+
       const payload = {
         trip_id: trip?.id || tripId,
         category_id: effectiveCatId,
-        amount: Number(amount),
-        original_amount: Number(amount),
-        original_currency: trip?.base_currency || 'USD',
-        conversion_rate: 1.0,
+        amount: computedAmountInBase,
+        original_amount: origAmount,
+        original_currency: selectedCurrency,
+        conversion_rate: rate,
         payment_method: paymentMethod,
         description: description || 'Logged Cost',
         date: expenseDate || new Date().toISOString().split('T')[0],
@@ -169,6 +232,25 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
       }
     } catch (error) {
       logger.error('LedgerView: Failed to delete expense:', error);
+    }
+  };
+
+  const handleUpdateConversionRate = async (expId: string, newRate: number) => {
+    if (isNaN(newRate) || newRate <= 0) return;
+
+    try {
+      const response = await fetch(`/api/expenses/${expId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversion_rate: newRate }),
+      });
+      const json = await response.json();
+      if (json.status === 'success') {
+        setEditingExpenseId(null);
+        fetchLedgerData();
+      }
+    } catch (error) {
+      logger.error('LedgerView: Failed to update expense conversion rate:', error);
     }
   };
 
@@ -248,6 +330,11 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
     );
   }
 
+  const baseCurrencySymbol = getCurrencySymbol(trip.base_currency);
+  const selectedCurrencySymbol = getCurrencySymbol(selectedCurrency);
+  const isForeignCurrency = selectedCurrency.toUpperCase() !== trip.base_currency.toUpperCase();
+  const computedBaseAmount = Number(amount || 0) * conversionRate;
+
   return (
     <div className="flex flex-col min-h-screen bg-bg-app text-text-main pb-24">
       {/* Top Header */}
@@ -281,29 +368,87 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
         {activeTab === 'entry' && (
           <section className="space-y-6">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg">
-              <div className="p-5 bg-zinc-850 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-gray-200">New Expense</h2>
-                <p className="text-xs text-gray-400">{trip.destination} • {trip.base_currency}</p>
+              <div className="p-5 bg-zinc-850 border-b border-zinc-800 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-200">New Expense</h2>
+                  <p className="text-xs text-gray-400">{trip.destination} • Main Currency: {trip.base_currency} ({baseCurrencySymbol})</p>
+                </div>
               </div>
 
               <form onSubmit={handleAddExpense} className="p-6 space-y-6">
-                {/* Huge Amount Input */}
-                <div className="text-center space-y-2">
-                  <span className="text-xs uppercase text-zinc-500 font-semibold tracking-wider">Amount Spent</span>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-4xl text-emerald-500 font-bold">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      className={`w-40 text-center text-4xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-white placeholder-zinc-700 ${
-                        errors.amount ? 'border-b border-red-500' : ''
-                      }`}
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
+                {/* Amount and Currency Input Block */}
+                <div className="text-center space-y-3">
+                  <span className="text-xs uppercase text-zinc-500 font-semibold tracking-wider block">Amount Spent</span>
+                  
+                  <div className="flex items-center justify-center gap-3">
+                    <select
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value)}
+                      className="bg-zinc-850 text-emerald-400 font-bold text-lg border border-zinc-700 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      data-testid="select-currency"
+                    >
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} ({c.symbol})
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="flex items-center gap-1">
+                      <span className="text-3xl text-emerald-500 font-bold">{selectedCurrencySymbol}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className={`w-36 text-center text-4xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-white placeholder-zinc-700 ${
+                          errors.amount ? 'border-b border-red-500' : ''
+                        }`}
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        data-testid="input-expense-amount"
+                      />
+                    </div>
                   </div>
+
                   {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
+
+                  {/* Multi-Currency Conversion Live Preview */}
+                  {isForeignCurrency && (
+                    <div className="p-3 bg-zinc-850 border border-zinc-800 rounded-xl space-y-2 text-center" data-testid="currency-conversion-preview">
+                      <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-400">
+                        <span>Converted Total:</span>
+                        <span className="text-sm font-bold text-gray-100 font-mono">
+                          {baseCurrencySymbol}{computedBaseAmount.toFixed(2)} {trip.base_currency}
+                        </span>
+                        {fetchingRate && <span className="text-zinc-500 text-[10px] animate-pulse">(fetching rate...)</span>}
+                      </div>
+
+                      <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-400">
+                        <span>Rate: 1 {selectedCurrency} = {conversionRate} {trip.base_currency}</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowRateEdit(!showRateEdit)}
+                          className="text-emerald-400 underline hover:text-emerald-300 ml-1"
+                        >
+                          {showRateEdit ? 'Hide Rate Edit' : 'Edit Rate'}
+                        </button>
+                      </div>
+
+                      {showRateEdit && (
+                        <div className="flex items-center justify-center gap-2 pt-2 border-t border-zinc-800">
+                          <label className="text-xs text-zinc-400 font-semibold">Custom Rate:</label>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={conversionRate}
+                            onChange={(e) => setConversionRate(Number(e.target.value))}
+                            className="w-24 bg-zinc-900 border border-zinc-700 text-white rounded px-2 py-1 text-xs font-mono text-center"
+                            data-testid="input-conversion-rate"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Category Chips Selector */}
@@ -407,6 +552,7 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
                 <button
                   type="submit"
                   className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-wider"
+                  data-testid="submit-transaction"
                 >
                   Add Expense
                 </button>
@@ -423,7 +569,7 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
                 <thead>
                   <tr className="bg-zinc-850 border-b border-zinc-800 text-zinc-400 text-xs tracking-wider uppercase text-left">
                     <th className="p-4 font-semibold">Category</th>
-                    <th className="p-4 text-right font-semibold">Spent</th>
+                    <th className="p-4 text-right font-semibold">Spent ({trip.base_currency})</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-850">
@@ -439,7 +585,7 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
                         <span className="font-semibold text-gray-200">{cat.name}</span>
                       </td>
                       <td className="p-4 text-right font-bold text-gray-100 font-mono">
-                        ${cat.total.toFixed(2)}
+                        {baseCurrencySymbol}{cat.total.toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -450,8 +596,8 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
             {/* Bento blocks */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl">
-                <span className="text-xs text-zinc-500 font-semibold block mb-1">Daily Average</span>
-                <span className="text-lg font-bold text-gray-100 font-mono">${dailyAverage.toFixed(2)}</span>
+                <span className="text-xs text-zinc-500 font-semibold block mb-1">Daily Average ({trip.base_currency})</span>
+                <span className="text-lg font-bold text-gray-100 font-mono">{baseCurrencySymbol}{dailyAverage.toFixed(2)}</span>
               </div>
               <div className={`p-4 rounded-2xl border ${budgetPercent >= 90 ? 'bg-red-950/20 border-red-800 text-red-500' : 'bg-zinc-900 border-zinc-800'}`}>
                 <span className="text-xs text-zinc-500 font-semibold block mb-1">Budget Used</span>
@@ -474,26 +620,94 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
                 <p className="text-zinc-600 text-sm italic">No transactions registered yet.</p>
               ) : (
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl divide-y divide-zinc-850 overflow-hidden">
-                  {expenses.map((exp) => (
-                    <div key={exp.id} className="p-4 flex justify-between items-center hover:bg-zinc-850 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-zinc-400">{getCategoryIcon(exp.category_icon || 'payments')}</span>
-                        <div>
-                          <p className="text-sm font-bold text-gray-200">{exp.description}</p>
-                          <p className="text-xs text-zinc-500">{exp.date} • {exp.payment_method.toUpperCase()}</p>
+                  {expenses.map((exp) => {
+                    const isExpForeign = exp.original_currency && exp.original_currency.toUpperCase() !== trip.base_currency.toUpperCase();
+                    const origSymbol = getCurrencySymbol(exp.original_currency);
+                    const isEditing = editingExpenseId === exp.id;
+                    
+                    return (
+                      <div key={exp.id} className="p-4 flex flex-col gap-2 hover:bg-zinc-850 transition-colors" data-testid={`expense-item-${exp.id}`}>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <span className="material-symbols-outlined text-zinc-400">{getCategoryIcon(exp.category_icon || 'payments')}</span>
+                            <div>
+                              <p className="text-sm font-bold text-gray-200">{exp.description}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-xs text-zinc-500">{exp.date} • {exp.payment_method.toUpperCase()}</span>
+                                {isExpForeign && (
+                                  <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono flex items-center gap-1">
+                                    <span>{origSymbol}{exp.original_amount.toFixed(2)} {exp.original_currency} @ {exp.conversion_rate}</span>
+                                    <button
+                                      onClick={() => {
+                                        setEditingExpenseId(exp.id);
+                                        setEditingRateValue(String(exp.conversion_rate));
+                                      }}
+                                      className="text-zinc-400 hover:text-white underline ml-1"
+                                      data-testid={`btn-edit-rate-${exp.id}`}
+                                      title="Modify rate post purchase"
+                                    >
+                                      Edit Rate
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-gray-100 font-mono block">
+                                {baseCurrencySymbol}{exp.amount.toFixed(2)}
+                              </span>
+                              {isExpForeign && (
+                                <span className="text-[10px] text-zinc-400 font-mono block">
+                                  ({exp.original_currency})
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleDeleteExpense(exp.id)}
+                              className="text-red-500 hover:text-red-400 p-1 rounded-full hover:bg-zinc-800 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                          </div>
                         </div>
+
+                        {/* Post-Purchase Conversion Rate Inline Editor */}
+                        {isEditing && (
+                          <div className="mt-2 p-3 bg-zinc-950 border border-emerald-500/40 rounded-xl flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-zinc-400 font-semibold">New Rate: 1 {exp.original_currency} =</span>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                value={editingRateValue}
+                                onChange={(e) => setEditingRateValue(e.target.value)}
+                                className="w-24 bg-zinc-900 border border-zinc-700 text-white rounded px-2 py-1 text-xs font-mono text-center"
+                                data-testid={`input-rate-edit-${exp.id}`}
+                              />
+                              <span className="text-xs text-zinc-400">{trip.base_currency}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setEditingExpenseId(null)}
+                                className="px-2 py-1 text-xs text-zinc-400 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleUpdateConversionRate(exp.id, Number(editingRateValue))}
+                                className="px-3 py-1 bg-emerald-500 text-black font-semibold text-xs rounded hover:bg-emerald-400 transition-colors"
+                                data-testid={`save-rate-edit-${exp.id}`}
+                              >
+                                Save Rate
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-bold text-gray-100 font-mono">${exp.amount.toFixed(2)}</span>
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id)}
-                          className="text-red-500 hover:text-red-400 p-1 rounded-full hover:bg-zinc-800 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-sm">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -514,11 +728,11 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
         <div className="grid grid-cols-2 h-20">
           <div className="flex flex-col justify-center px-6 border-r border-zinc-800">
             <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Remaining</span>
-            <span className="text-md font-bold text-zinc-300 font-mono">${Math.max(0, budgetLimit - totalSpent).toFixed(2)}</span>
+            <span className="text-md font-bold text-zinc-300 font-mono">{baseCurrencySymbol}{Math.max(0, budgetLimit - totalSpent).toFixed(2)}</span>
           </div>
           <div className="flex flex-col justify-center px-6">
             <span className="text-xs text-emerald-500 uppercase tracking-wider font-semibold">Total Spent</span>
-            <span className="text-xl font-bold text-emerald-400 font-mono">${totalSpent.toFixed(2)}</span>
+            <span className="text-xl font-bold text-emerald-400 font-mono">{baseCurrencySymbol}{totalSpent.toFixed(2)}</span>
           </div>
         </div>
       </div>

@@ -92,6 +92,33 @@ describe('Expenses & Categories Routes API', () => {
     });
   });
 
+  describe('PUT /api/expenses/:id', () => {
+    it('should update conversion rate and recalculate amount', async () => {
+      // Seed a foreign expense
+      await db.execute({
+        sql: 'INSERT INTO expenses (id, trip_id, category_id, amount, original_amount, original_currency, conversion_rate, payment_method, description, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: ['exp-3', 'trip-1', 'cat-flight', 365.0, 100.0, 'USD', 3.65, 'card', 'Flight', '2026-08-01'],
+      });
+
+      const response = await request(app)
+        .put('/api/expenses/exp-3')
+        .send({ conversion_rate: 3.70 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe('success');
+      expect(response.body.data.conversion_rate).toBe(3.70);
+      expect(response.body.data.amount).toBe(370.0);
+
+      // Verify in DB
+      const result = await db.execute({
+        sql: 'SELECT conversion_rate, amount FROM expenses WHERE id = ?',
+        args: ['exp-3'],
+      });
+      expect(result.rows[0].conversion_rate).toBe(3.70);
+      expect(result.rows[0].amount).toBe(370.0);
+    });
+  });
+
   describe('DELETE /api/expenses/:id', () => {
     it('should delete the expense and return 200', async () => {
       // Seed an expense
