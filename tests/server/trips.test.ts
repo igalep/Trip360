@@ -54,7 +54,8 @@ describe('Trips Routes API', () => {
       const payload = {
         name: '', // invalid
         destination: 'Baku',
-        start_date: 'invalid-date',
+        start_date: '2026-08-01',
+        end_date: '2026-08-08',
       };
 
       const response = await request(app)

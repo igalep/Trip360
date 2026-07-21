@@ -110,6 +110,10 @@ describe('LedgerView Component', () => {
     // Ledger summary table should contain flights spent
     expect(screen.getByText('Flight')).toBeTruthy();
     expect(screen.getAllByText('$350.00').length).toBeGreaterThan(0);
+    
+    // Transactions count badge should render correctly
+    expect(screen.getByTestId('transactions-count')).toBeTruthy();
+    expect(screen.getByText('1 transaction')).toBeTruthy();
   });
 
   it('should allow adding a custom category', async () => {

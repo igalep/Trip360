@@ -40,9 +40,10 @@ interface Trip {
 interface LedgerViewProps {
   tripId: string;
   onBack: () => void;
+  onSelectCategory?: (categoryName: string) => void;
 }
 
-export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
+export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerViewProps) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -105,11 +106,13 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
+    const effectiveCatId = selectedCategoryId || (categories.length > 0 ? categories[0].id : '');
     const newErrors: Record<string, string> = {};
+
     if (!amount || Number(amount) <= 0) {
       newErrors.amount = 'Please enter a valid amount';
     }
-    if (!selectedCategoryId) {
+    if (!effectiveCatId) {
       newErrors.category = 'Please select a category';
     }
     if (Object.keys(newErrors).length > 0) {
@@ -119,15 +122,15 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
 
     try {
       const payload = {
-        trip_id: tripId,
-        category_id: selectedCategoryId,
+        trip_id: trip?.id || tripId,
+        category_id: effectiveCatId,
         amount: Number(amount),
         original_amount: Number(amount),
         original_currency: trip?.base_currency || 'USD',
         conversion_rate: 1.0,
         payment_method: paymentMethod,
         description: description || 'Logged Cost',
-        date: expenseDate,
+        date: expenseDate || new Date().toISOString().split('T')[0],
       };
 
       const response = await fetch('/api/expenses', {
@@ -141,8 +144,14 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
         setAmount('');
         setDescription('');
         setErrors({});
-        fetchLedgerData();
-        setActiveTab('ledger'); // Automatically swap to summary
+        const selCat = categories.find((c) => c.id === effectiveCatId);
+        const categoryName = selCat ? selCat.name : (categories.length > 0 ? categories[0].name : 'Misc');
+        if (onSelectCategory) {
+          onSelectCategory(categoryName);
+        } else {
+          fetchLedgerData();
+          setActiveTab('ledger');
+        }
       }
     } catch (error) {
       logger.error('LedgerView: Failed to save expense:', error);
@@ -220,8 +229,23 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
     }
   };
 
-  if (loading || !trip) {
+  if (loading) {
     return <div className="p-6 text-center text-gray-400">Loading ledger details...</div>;
+  }
+
+  if (!trip) {
+    return (
+      <div className="p-12 text-center text-gray-400 space-y-4">
+        <p className="text-lg font-bold text-gray-200">Trip not found</p>
+        <p className="text-xs text-zinc-500">The requested trip ID could not be retrieved from the database.</p>
+        <button
+          onClick={onBack}
+          className="px-4 py-2 bg-emerald-500 text-black font-bold text-sm rounded-lg hover:bg-emerald-400 transition-colors"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -342,30 +366,17 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
                   </div>
                 </div>
 
-                {/* Date & Note Row */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-zinc-500 font-semibold">Expense Date</span>
-                    <input
-                      type="date"
-                      className="w-full bg-zinc-850 border border-zinc-800 rounded-lg p-2 text-xs text-white"
-                      value={expenseDate}
-                      onChange={(e) => setExpenseDate(e.target.value)}
-                      min={trip?.start_date}
-                      max={trip?.end_date}
-                      style={{ colorScheme: 'dark' }}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-zinc-500 font-semibold">Note / Details</span>
-                    <input
-                      type="text"
-                      placeholder="e.g. Flight ticket"
-                      className="w-full bg-zinc-850 border border-zinc-800 rounded-lg p-2 text-xs text-white"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
+                {/* Note / Details Row */}
+                <div className="space-y-1">
+                  <span className="text-xs text-zinc-400 font-semibold uppercase">Note / Details</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Flight ticket"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-gray-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    data-testid="input-expense-description"
+                  />
                 </div>
 
                 {/* Payment Method toggle */}
@@ -417,7 +428,12 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
                 </thead>
                 <tbody className="divide-y divide-zinc-850">
                   {categoryAggregates.map((cat) => (
-                    <tr key={cat.id} className={`${getCategoryColorClass(cat.group_name)} hover:bg-zinc-850 transition-colors`}>
+                    <tr
+                      key={cat.id}
+                      onClick={() => onSelectCategory && onSelectCategory(cat.name)}
+                      className={`${getCategoryColorClass(cat.group_name)} hover:bg-zinc-800 transition-colors cursor-pointer`}
+                      data-testid={`category-row-${cat.id}`}
+                    >
                       <td className="p-4 flex items-center gap-3">
                         <span className="material-symbols-outlined text-sm">{getCategoryIcon(cat.icon)}</span>
                         <span className="font-semibold text-gray-200">{cat.name}</span>
@@ -445,7 +461,15 @@ export default function LedgerView({ tripId, onBack }: LedgerViewProps) {
 
             {/* Ledger Transactions Entries list */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Transactions</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Transactions</h3>
+                <span
+                  className="text-xs font-mono px-2 py-0.5 bg-zinc-800 rounded-full text-zinc-400 border border-zinc-700 font-semibold"
+                  data-testid="transactions-count"
+                >
+                  {expenses.length} {expenses.length === 1 ? 'transaction' : 'transactions'}
+                </span>
+              </div>
               {expenses.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">No transactions registered yet.</p>
               ) : (

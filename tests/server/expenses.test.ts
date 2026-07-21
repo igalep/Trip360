@@ -85,7 +85,7 @@ describe('Expenses & Categories Routes API', () => {
 
       // Verify in DB
       const result = await db.execute({
-        sql: 'SELECT * FROM expenses WHERE id = ?',
+        sql: 'SELECT id FROM expenses WHERE id = ?',
         args: [response.body.data.id],
       });
       expect(result.rows.length).toBe(1);
@@ -107,7 +107,7 @@ describe('Expenses & Categories Routes API', () => {
 
       // Verify in DB
       const result = await db.execute({
-        sql: 'SELECT * FROM expenses WHERE id = ?',
+        sql: 'SELECT id FROM expenses WHERE id = ?',
         args: ['exp-2'],
       });
       expect(result.rows.length).toBe(0);
