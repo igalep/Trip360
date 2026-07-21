@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { GetExchangeRateSchema } from '../schemas/currency.schema';
 import { validateRequest } from '../middlewares/validation.middleware';
 import { CurrencyService } from '../services/currency.service';

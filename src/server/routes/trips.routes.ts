@@ -44,7 +44,7 @@ const fetchDestinationImage = async (destination: string): Promise<string> => {
 };
 
 // GET /api/trips - List all trips with total spent
-router.get('/', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const result = await db.execute(`
       SELECT 

@@ -1,41 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { logger } from '../utils/logger';
-
-interface Category {
-  id: string;
-  trip_id: string;
-  name: string;
-  icon: string;
-  group_name: string;
-  is_default: number;
-}
-
-interface Expense {
-  id: string;
-  trip_id: string;
-  category_id: string;
-  amount: number;
-  original_amount: number;
-  original_currency: string;
-  conversion_rate: number;
-  payment_method: string;
-  description: string;
-  date: string;
-  category_name?: string;
-  category_icon?: string;
-}
-
-interface Trip {
-  id: string;
-  name: string;
-  destination: string;
-  start_date: string;
-  end_date: string;
-  nights: number;
-  base_currency: string;
-  budget_limit: number;
-  image_url: string;
-}
+import { useState, useEffect } from 'react';
+import { useLedger } from '../hooks/useLedger';
+import { useCurrencyRate } from '../hooks/useCurrencyRate';
 
 interface LedgerViewProps {
   tripId: string;
@@ -63,22 +28,32 @@ export const getCurrencySymbol = (code?: string): string => {
 };
 
 export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerViewProps) {
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    trip,
+    categories,
+    expenses,
+    loading,
+    totalSpent,
+    budgetLimit,
+    budgetPercent,
+    dailyAverage,
+    categoryAggregates,
+    addExpense,
+    deleteExpense,
+    updateExpenseRate,
+    addCategory,
+  } = useLedger(tripId);
+
   const [activeTab, setActiveTab] = useState<'entry' | 'ledger' | 'stats'>('entry');
 
   // Drawers
-  const [showSideDrawer, setShowSideDrawer] = useState(false);
   const [showNotifyDrawer, setShowNotifyDrawer] = useState(false);
 
-  // New Expense form states
+  // Form state
   const [amount, setAmount] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [conversionRate, setConversionRate] = useState(1.0);
   const [showRateEdit, setShowRateEdit] = useState(false);
-  const [fetchingRate, setFetchingRate] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [description, setDescription] = useState('');
@@ -91,76 +66,40 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
   // Custom Category form states
   const [showCustomCatForm, setShowCustomCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('category');
+  const [newCatIcon] = useState('category');
 
   // Inline Validation states
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Dynamic exchange rate hook with AbortController protection
+  const { rate: fetchedRate, loading: fetchingRate } = useCurrencyRate(
+    selectedCurrency,
+    trip?.base_currency || 'USD',
+    expenseDate
+  );
+
+  // Sync fetched rate to conversionRate state
   useEffect(() => {
-    fetchLedgerData();
-  }, [tripId]);
+    setConversionRate(fetchedRate);
+  }, [fetchedRate]);
 
-  const fetchLedgerData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/trips/${tripId}`);
-      const json = await response.json();
-      if (json.status === 'success') {
-        const loadedTrip: Trip = json.data.trip;
-        setTrip(loadedTrip);
-        setCategories(json.data.categories);
-        setExpenses(json.data.expenses);
-        
-        // Select trip's base currency by default
-        if (loadedTrip.base_currency) {
-          setSelectedCurrency(loadedTrip.base_currency);
-        }
-
-        // Select first category by default if none selected
-        if (json.data.categories.length > 0 && !selectedCategoryId) {
-          setSelectedCategoryId(json.data.categories[0].id);
-        }
-
-        // Adjust default expense date if today is outside trip bounds
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (todayStr < loadedTrip.start_date || todayStr > loadedTrip.end_date) {
-          setExpenseDate(loadedTrip.start_date);
-        } else {
-          setExpenseDate(todayStr);
-        }
-      }
-    } catch (error) {
-      logger.error('LedgerView: Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
+  // Sync default currency and categories when trip loads
+  useEffect(() => {
+    if (trip?.base_currency) {
+      setSelectedCurrency(trip.base_currency);
     }
-  };
-
-  // Dynamic Exchange Rate Fetching
-  useEffect(() => {
-    const fetchRate = async () => {
-      const baseCurr = trip?.base_currency || 'USD';
-      if (!selectedCurrency || selectedCurrency.toUpperCase() === baseCurr.toUpperCase()) {
-        setConversionRate(1.0);
-        return;
+    if (categories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(categories[0].id);
+    }
+    if (trip) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (todayStr < trip.start_date || todayStr > trip.end_date) {
+        setExpenseDate(trip.start_date);
+      } else {
+        setExpenseDate(todayStr);
       }
-
-      try {
-        setFetchingRate(true);
-        const res = await fetch(`/api/currencies/rate?from=${selectedCurrency}&to=${baseCurr}&date=${expenseDate}`);
-        const data = await res.json();
-        if (data.status === 'success' && typeof data.data.rate === 'number') {
-          setConversionRate(data.data.rate);
-        }
-      } catch (err) {
-        logger.error('Failed to fetch exchange rate:', err);
-      } finally {
-        setFetchingRate(false);
-      }
-    };
-
-    fetchRate();
-  }, [selectedCurrency, trip?.base_currency, expenseDate]);
+    }
+  }, [trip, categories]);
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,79 +117,47 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
       return;
     }
 
-    try {
-      const baseCurr = trip?.base_currency || 'USD';
-      const origAmount = Number(amount);
-      const rate = selectedCurrency.toUpperCase() === baseCurr.toUpperCase() ? 1.0 : Number(conversionRate);
-      const computedAmountInBase = Number((origAmount * rate).toFixed(2));
+    const baseCurr = trip?.base_currency || 'USD';
+    const origAmount = Number(amount);
+    const rate = selectedCurrency.toUpperCase() === baseCurr.toUpperCase() ? 1.0 : Number(conversionRate);
+    const computedAmountInBase = Number((origAmount * rate).toFixed(2));
 
-      const payload = {
-        trip_id: trip?.id || tripId,
-        category_id: effectiveCatId,
-        amount: computedAmountInBase,
-        original_amount: origAmount,
-        original_currency: selectedCurrency,
-        conversion_rate: rate,
-        payment_method: paymentMethod,
-        description: description || 'Logged Cost',
-        date: expenseDate || new Date().toISOString().split('T')[0],
-      };
+    const payload = {
+      trip_id: trip?.id || tripId,
+      category_id: effectiveCatId,
+      amount: computedAmountInBase,
+      original_amount: origAmount,
+      original_currency: selectedCurrency,
+      conversion_rate: rate,
+      payment_method: paymentMethod,
+      description: description || 'Logged Cost',
+      date: expenseDate || new Date().toISOString().split('T')[0],
+    };
 
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await response.json();
-      if (json.status === 'success') {
-        setAmount('');
-        setDescription('');
-        setErrors({});
-        const selCat = categories.find((c) => c.id === effectiveCatId);
-        const categoryName = selCat ? selCat.name : (categories.length > 0 ? categories[0].name : 'Misc');
-        if (onSelectCategory) {
-          onSelectCategory(categoryName);
-        } else {
-          fetchLedgerData();
-          setActiveTab('ledger');
-        }
+    const success = await addExpense(payload);
+    if (success) {
+      setAmount('');
+      setDescription('');
+      setErrors({});
+      const selCat = categories.find((c) => c.id === effectiveCatId);
+      const categoryName = selCat ? selCat.name : (categories.length > 0 ? categories[0].name : 'Misc');
+      if (onSelectCategory) {
+        onSelectCategory(categoryName);
+      } else {
+        setActiveTab('ledger');
       }
-    } catch (error) {
-      logger.error('LedgerView: Failed to save expense:', error);
     }
   };
 
   const handleDeleteExpense = async (expId: string) => {
-    try {
-      const response = await fetch(`/api/expenses/${expId}`, {
-        method: 'DELETE',
-      });
-      const json = await response.json();
-      if (json.status === 'success') {
-        fetchLedgerData();
-      }
-    } catch (error) {
-      logger.error('LedgerView: Failed to delete expense:', error);
-    }
+    await deleteExpense(expId);
   };
 
-  const handleUpdateConversionRate = async (expId: string, newRate: number) => {
+  const handleUpdateRateSubmit = async (expId: string, newRate: number) => {
     if (isNaN(newRate) || newRate <= 0) return;
-
-    try {
-      const response = await fetch(`/api/expenses/${expId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversion_rate: newRate }),
-      });
-      const json = await response.json();
-      if (json.status === 'success') {
-        setEditingExpenseId(null);
-        fetchLedgerData();
-      }
-    } catch (error) {
-      logger.error('LedgerView: Failed to update expense conversion rate:', error);
+    const success = await updateExpenseRate(expId, newRate);
+    if (success) {
+      setEditingExpenseId(null);
     }
   };
 
@@ -258,36 +165,12 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
     e.preventDefault();
     if (!newCatName.trim()) return;
 
-    try {
-      const response = await fetch(`/api/trips/${tripId}/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCatName, icon: newCatIcon }),
-      });
-      const json = await response.json();
-      if (json.status === 'success') {
-        setNewCatName('');
-        setShowCustomCatForm(false);
-        fetchLedgerData();
-      }
-    } catch (error) {
-      logger.error('LedgerView: Failed to create custom category:', error);
+    const success = await addCategory(newCatName, newCatIcon);
+    if (success) {
+      setNewCatName('');
+      setShowCustomCatForm(false);
     }
   };
-
-  // Calculations
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const budgetLimit = trip?.budget_limit || 1000;
-  const budgetPercent = Math.min(100, Math.round((totalSpent / budgetLimit) * 100));
-  const dailyAverage = trip?.nights ? (totalSpent / trip.nights) : totalSpent;
-
-  // Category Aggregates
-  const categoryAggregates = categories.map((cat) => {
-    const total = expenses
-      .filter((exp) => exp.category_id === cat.id)
-      .reduce((sum, exp) => sum + exp.amount, 0);
-    return { ...cat, total };
-  });
 
   const getCategoryColorClass = (groupName: string) => {
     switch (groupName.toLowerCase()) {
@@ -696,7 +579,7 @@ export default function LedgerView({ tripId, onBack, onSelectCategory }: LedgerV
                                 Cancel
                               </button>
                               <button
-                                onClick={() => handleUpdateConversionRate(exp.id, Number(editingRateValue))}
+                                onClick={() => handleUpdateRateSubmit(exp.id, Number(editingRateValue))}
                                 className="px-3 py-1 bg-emerald-500 text-black font-semibold text-xs rounded hover:bg-emerald-400 transition-colors"
                                 data-testid={`save-rate-edit-${exp.id}`}
                               >

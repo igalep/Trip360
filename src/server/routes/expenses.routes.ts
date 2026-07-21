@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { CreateExpenseSchema, UpdateExpenseSchema } from '../schemas/expense.schema';
 import { validateRequest } from '../middlewares/validation.middleware';
