@@ -1,13 +1,22 @@
-import { describe, expect, it, beforeAll } from '@jest/globals';
+import { describe, expect, it, beforeAll, afterAll } from '@jest/globals';
 import request from 'supertest';
 import app from '../../src/server/server';
 import { initLoaders } from '../../src/server/loaders';
 import { hashPasswordInBrowser } from '../../src/utils/crypto';
+import { db } from '../../src/server/db';
 
 describe('User Authentication & Management API', () => {
   beforeAll(async () => {
-    process.env.TURSO_DATABASE_URL = 'file:test.db';
     await initLoaders({ app });
+  });
+
+  afterAll(async () => {
+    if (testUser.email) {
+      await db.execute({
+        sql: 'DELETE FROM users WHERE email = ?',
+        args: [testUser.email.toLowerCase()],
+      });
+    }
   });
 
   const testUser = {

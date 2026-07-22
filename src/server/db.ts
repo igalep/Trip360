@@ -1,11 +1,19 @@
 import { createClient } from '@libsql/client';
 import dotenv from 'dotenv';
 
-// Load environment variables
+// Load environment variables from .env
 dotenv.config();
 
-const url = process.env.TURSO_DATABASE_URL || 'file:dev.db';
-const authToken = process.env.TURSO_AUTH_TOKEN;
+const rawUrl = process.env.TURSO_DATABASE_URL;
+const rawToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!rawUrl) {
+  throw new Error('TURSO_DATABASE_URL environment variable is missing in .env');
+}
+
+// Strip any enclosing quotes from environment variables
+const url = rawUrl.replace(/^['"]|['"]$/g, '');
+const authToken = rawToken ? rawToken.replace(/^['"]|['"]$/g, '') : undefined;
 
 export const db = createClient({
   url,
