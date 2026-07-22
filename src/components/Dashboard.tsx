@@ -89,6 +89,21 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
     const mapboxToken = process.env.VITE_MAPBOX_ACCESS_TOKEN;
 
     const staticSuggestions = [
+      'Montenegro',
+      'Greece',
+      'Italy',
+      'Spain',
+      'Japan',
+      'Thailand',
+      'Switzerland',
+      'Portugal',
+      'Iceland',
+      'Norway',
+      'Croatia',
+      'Vietnam',
+      'Mexico',
+      'France',
+      'United Kingdom',
       'London, United Kingdom',
       'Paris, France',
       'New York, USA',
@@ -124,13 +139,16 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
       }
 
       try {
-        const url = `${EXTERNAL_APIS.MAPBOX_PLACES_BASE_URL}/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&types=place,locality&limit=5`;
+        const url = `${EXTERNAL_APIS.MAPBOX_PLACES_BASE_URL}/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&types=country,place,locality,region&limit=5`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error('Mapbox API error');
         }
         const data = await response.json();
         const places = (data.features?.map((f: any) => {
+          if (f.place_type?.includes('country') || f.id?.startsWith('country')) {
+            return f.text || f.place_name;
+          }
           const city = f.text;
           const countryItem = f.context?.find((c: any) => c.id?.startsWith('country'));
           if (city && countryItem?.text) {
