@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import LedgerView from './components/LedgerView';
 import CategoryManageView from './components/CategoryManageView';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthView } from './components/auth/AuthView';
 
-function App() {
+function MainAppContent() {
+  const { user, loading } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -18,6 +21,18 @@ function App() {
     window.history.pushState({}, '', path);
     setCurrentPath(path);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center text-zinc-400">
+        <span className="material-symbols-outlined text-4xl animate-spin text-emerald-400">progress_activity</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthView />;
+  }
 
   // Match /trip/:trip_name/category/:category_name route
   const categoryMatch = currentPath.match(/^\/trip\/([^/]+)\/category\/([^/]+)$/);
@@ -52,6 +67,14 @@ function App() {
         <Dashboard onSelectTrip={(tripName) => navigate(`/trip/${encodeURIComponent(tripName)}`)} />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <MainAppContent />
+    </AuthProvider>
   );
 }
 

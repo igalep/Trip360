@@ -1,9 +1,30 @@
 -- Enable foreign keys
 PRAGMA foreign_keys = ON;
 
+-- Users Table
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Sessions Table
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Trips Table
 CREATE TABLE IF NOT EXISTS trips (
   id TEXT PRIMARY KEY,
+  user_id TEXT,
   name TEXT NOT NULL,
   destination TEXT NOT NULL,
   start_date TEXT NOT NULL, -- YYYY-MM-DD
@@ -11,7 +32,8 @@ CREATE TABLE IF NOT EXISTS trips (
   nights INTEGER NOT NULL,
   base_currency TEXT NOT NULL DEFAULT 'USD',
   budget_limit REAL NOT NULL DEFAULT 1000.0,
-  image_url TEXT
+  image_url TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Categories Table (default + custom sections)

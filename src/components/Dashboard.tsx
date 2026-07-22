@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
 import { EXTERNAL_APIS } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 
 export interface Trip {
   id: string;
@@ -20,9 +21,11 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onSelectTrip }: DashboardProps) {
+  const { user, logout } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const handleDeleteTrip = async (tripId: string) => {
@@ -355,13 +358,65 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         <div className="flex items-center gap-2">
           <span className="text-xl font-black text-emerald-400 tracking-wider">TripVault</span>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="material-symbols-outlined p-2 text-zinc-400 hover:bg-zinc-800 rounded-full transition-all">
-            notifications
-          </button>
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-zinc-700 bg-zinc-800 flex items-center justify-center font-bold text-sm text-emerald-400">
-            A
-          </div>
+        <div className="flex items-center gap-4 relative">
+          {user && (
+            <div className="relative flex items-center gap-3">
+              <span className="text-xs font-semibold text-zinc-400 hidden sm:inline">{user.name}</span>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-8 h-8 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm hover:bg-emerald-500/20 transition-all cursor-pointer"
+                title={`Profile: ${user.name} (${user.email})`}
+                data-testid="user-avatar-btn"
+              >
+                {user.name ? user.name[0].toUpperCase() : 'U'}
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowProfileMenu(false)}
+                  ></div>
+                  <div
+                    className="absolute right-0 top-11 w-64 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150"
+                    data-testid="profile-dropdown-menu"
+                  >
+                    <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-base">
+                        {user.name ? user.name[0].toUpperCase() : 'U'}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-bold text-gray-100 truncate">{user.name}</p>
+                        <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-zinc-400 p-2 rounded-xl bg-zinc-950/60 border border-zinc-850">
+                        <span className="font-semibold">Status</span>
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          Active Session
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        logout();
+                      }}
+                      className="w-full py-2.5 px-3 bg-red-950/30 hover:bg-red-950/60 border border-red-800/40 text-red-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 uppercase tracking-wider"
+                      data-testid="profile-logout-btn"
+                    >
+                      <span className="material-symbols-outlined text-sm">logout</span>
+                      Log Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </header>
 

@@ -25,8 +25,16 @@ const mockTrips = [
 describe('App Component Routing', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/');
+    localStorage.setItem('budgetcontrol_session_token', 'test_mock_token');
     const mockFetch = jest.fn().mockImplementation((url: any) => {
-      if (typeof url === 'string' && url.includes('/api/trips/')) {
+      const urlStr = String(url);
+      if (urlStr.includes('/api/auth/me')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: 'success', data: { user: { id: 'u-1', email: 'test@example.com', name: 'Test User' } } }),
+        });
+      }
+      if (urlStr.includes('/api/trips/')) {
         return Promise.resolve({
           ok: true,
           json: () =>
