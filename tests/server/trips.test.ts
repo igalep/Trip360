@@ -1,17 +1,47 @@
-import { describe, expect, it, beforeAll, beforeEach } from '@jest/globals';
+import { describe, expect, it, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import app from '../../src/server/server';
 import { db } from '../../src/server/db';
 import { initLoaders } from '../../src/server/loaders';
+import { hashPasswordInBrowser } from '../../src/utils/crypto';
 
 describe('Trips Routes API', () => {
+  const testUser = {
+    email: `test_trips_${Date.now()}@example.com`,
+    rawPassword: 'Password123!',
+    name: 'Trips Tester',
+  };
+  let sessionToken = '';
+  let userId = '';
+
   beforeAll(async () => {
     await initLoaders({ app });
     // Run schema.sql to ensure test DB structure is clean
     const schemaSql = readFileSync(join(process.cwd(), 'schema.sql'), 'utf8');
     await db.executeMultiple(schemaSql);
+
+    // Register a test user
+    const preHashedPassword = await hashPasswordInBrowser(testUser.rawPassword, testUser.email.toLowerCase());
+    const regResponse = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: testUser.email,
+        password: preHashedPassword,
+        name: testUser.name,
+      });
+    
+    sessionToken = regResponse.body.data.token;
+    userId = regResponse.body.data.user.id;
+  });
+
+  afterAll(async () => {
+    // Cleanup test user
+    await db.execute({
+      sql: 'DELETE FROM users WHERE email = ?',
+      args: [testUser.email.toLowerCase()],
+    });
   });
 
   beforeEach(async () => {
@@ -34,6 +64,7 @@ describe('Trips Routes API', () => {
 
       const response = await request(app)
         .post('/api/trips')
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send(payload);
 
       expect(response.status).toBe(201);
@@ -60,6 +91,7 @@ describe('Trips Routes API', () => {
 
       const response = await request(app)
         .post('/api/trips')
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send(payload);
 
       expect(response.status).toBe(400);
@@ -70,13 +102,15 @@ describe('Trips Routes API', () => {
 
   describe('GET /api/trips', () => {
     it('should return a list of trips', async () => {
-      // Seed a trip manually
+      // Seed a trip manually linked to test user
       await db.execute({
-        sql: 'INSERT INTO trips (id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        args: ['trip-1', 'Georgia Trip', 'Georgia', '2026-09-01', '2026-09-05', 4, 'USD', 1200],
+        sql: 'INSERT INTO trips (id, user_id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: ['trip-1', userId, 'Georgia Trip', 'Georgia', '2026-09-01', '2026-09-05', 4, 'USD', 1200],
       });
 
-      const response = await request(app).get('/api/trips');
+      const response = await request(app)
+        .get('/api/trips')
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.status).toBe('success');
@@ -87,10 +121,10 @@ describe('Trips Routes API', () => {
 
   describe('DELETE /api/trips/:id', () => {
     it('should delete the trip and cascade delete categories/expenses', async () => {
-      // Seed a trip
+      // Seed a trip linked to test user
       await db.execute({
-        sql: 'INSERT INTO trips (id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        args: ['trip-del', 'Delete Me', 'Nowhere', '2026-09-01', '2026-09-05', 4, 'USD', 1000],
+        sql: 'INSERT INTO trips (id, user_id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: ['trip-del', userId, 'Delete Me', 'Nowhere', '2026-09-01', '2026-09-05', 4, 'USD', 1000],
       });
       // Seed a category
       await db.execute({
@@ -98,7 +132,9 @@ describe('Trips Routes API', () => {
         args: ['cat-del', 'trip-del', 'Flights', 'flight', 'fixed'],
       });
 
-      const response = await request(app).delete('/api/trips/trip-del');
+      const response = await request(app)
+        .delete('/api/trips/trip-del')
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.status).toBe('success');
@@ -119,7 +155,9 @@ describe('Trips Routes API', () => {
     });
 
     it('should return 404 if trip to delete is not found', async () => {
-      const response = await request(app).delete('/api/trips/trip-non-existent');
+      const response = await request(app)
+        .delete('/api/trips/trip-non-existent')
+        .set('Authorization', `Bearer ${sessionToken}`);
       expect(response.status).toBe(404);
       expect(response.body.status).toBe('error');
     });
