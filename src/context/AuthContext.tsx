@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { hashPassword } from '../utils/crypto';
 import { logger } from '../utils/logger';
 
@@ -8,7 +8,7 @@ export interface User {
   name: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, rawPassword: string) => Promise<void>;
@@ -16,7 +16,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -125,16 +125,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    return {
-      user: null,
-      loading: false,
-      login: async () => {},
-      register: async () => {},
-      logout: async () => {},
-    };
-  }
-  return context;
-};
+export { useAuth } from '../hooks/useAuth';
