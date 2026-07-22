@@ -1,8 +1,30 @@
-# BudgetControl - Personal Finance Manager `v0.0.1`
+# BudgetControl - Trip Management 360 `v0.0.1`
 
-**Version:** `v0.0.1`
+**Version:** `v0.0.1`  
+**Core Purpose:** Complete end-to-end **Trip Management 360** platform covering Planning, Execution, and Budget Management.  
+**Current Milestone:** **Phase 1: Budget Management**.
 
-A high-performance personal financial manager built with **React 19**, **Vite**, **Node.js (Express)**, and **Turso/libSQL (SQLite)**. It features a modern dark-mode interface for tracking travel budgets, multi-currency expenses, category management, user authentication, and mobile integration via Capacitor.
+A high-performance personal financial and travel management platform built with **React 19**, **Vite**, **Node.js (Express)**, and **Turso/libSQL (SQLite)**. It provides a modern dark-mode interface tailored for travel budget tracking, foreign exchange conversions, user authentication, and cross-platform mobile integration via Capacitor.
+
+---
+
+## 🗺️ Product Vision & Phase Roadmap
+
+BudgetControl is built to empower travelers across the entire 360° travel lifecycle:
+
+```mermaid
+graph LR
+    P1["Phase 1: Budget Management (Current)"] --> P2["Phase 2: Execution (On-Trip Companion)"]
+    P2 --> P3["Phase 3: Planning (Pre-Trip Itinerary)"]
+
+    style P1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#000
+    style P2 fill:#27272a,stroke:#3f3f46,stroke-width:1px,color:#fff
+    style P3 fill:#27272a,stroke:#3f3f46,stroke-width:1px,color:#fff
+```
+
+- **Phase 1: Budget Management (Active)**: Multi-currency expense tracking, live exchange rate conversions, category budget matrices, and secure user management.
+- **Phase 2: Execution (Upcoming)**: Real-time itinerary tracking, location-based expense geofencing, and offline mobile sync.
+- **Phase 3: Planning (Upcoming)**: AI-assisted itinerary planning, flight & hotel booking management, and interactive packing lists.
 
 ---
 
@@ -15,7 +37,7 @@ Follow these step-by-step instructions to set up, initialize, and run the projec
 - **npm**: v9.0.0 or higher
 
 ### 2. Installation
-Clone the repository and install all dependencies:
+Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/igalepshtein/BudgetControl.git
 cd BudgetControl
@@ -27,7 +49,7 @@ Run the database initialization script to create the local SQLite schema (`schem
 ```bash
 npm run db:init
 ```
-*Note: The server also performs automatic schema migration checks (`ALTER TABLE` statements) on startup.*
+*Note: The server automatically verifies and executes database migrations on boot.*
 
 ### 4. Start Development Server
 Run the unified development command to launch the backend Express server alongside Vite HMR for the frontend:
@@ -95,6 +117,8 @@ npm test
 For deeper architectural breakdowns and feature specifications, explore the `/docs` directory:
 - [Architecture & Design Guide](docs/ARCHITECTURE_DESIGN.md)
 - [Current Features Specification](docs/CURRENT_FEATURES.md)
+- [Release History](docs/RELEASE_HISTORY.md)
+- [Development Status](docs/DEVELOPMENT_STATUS.md)
 
 ---
 
