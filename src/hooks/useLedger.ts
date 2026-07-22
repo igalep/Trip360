@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../utils/logger';
+import { apiClient } from '../utils/apiClient';
 
 export interface Category {
   id: string;
@@ -60,7 +61,7 @@ export function useLedger(tripId: string) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/trips/${tripId}`);
+      const response = await apiClient.get(`/api/trips/${tripId}`);
       const json = await response.json();
 
       if (json.status === 'success') {
@@ -84,12 +85,7 @@ export function useLedger(tripId: string) {
 
   const addExpense = useCallback(async (payload: CreateExpensePayload): Promise<boolean> => {
     try {
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
+      const response = await apiClient.post('/api/expenses', payload);
       const json = await response.json();
       if (json.status === 'success') {
         await fetchLedgerData();
@@ -104,9 +100,7 @@ export function useLedger(tripId: string) {
 
   const deleteExpense = useCallback(async (expenseId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/expenses/${expenseId}`, {
-        method: 'DELETE',
-      });
+      const response = await apiClient.delete(`/api/expenses/${expenseId}`);
       const json = await response.json();
       if (json.status === 'success') {
         await fetchLedgerData();
@@ -121,11 +115,7 @@ export function useLedger(tripId: string) {
 
   const updateExpenseRate = useCallback(async (expenseId: string, newRate: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/expenses/${expenseId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversion_rate: newRate }),
-      });
+      const response = await apiClient.put(`/api/expenses/${expenseId}`, { conversion_rate: newRate });
       const json = await response.json();
       if (json.status === 'success') {
         await fetchLedgerData();
@@ -140,11 +130,7 @@ export function useLedger(tripId: string) {
 
   const addCategory = useCallback(async (name: string, icon: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/trips/${tripId}/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, icon }),
-      });
+      const response = await apiClient.post(`/api/trips/${tripId}/categories`, { name, icon });
       const json = await response.json();
       if (json.status === 'success') {
         await fetchLedgerData();

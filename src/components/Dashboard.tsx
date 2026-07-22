@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { EXTERNAL_APIS } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
 import { APP_VERSION } from '../version';
+import { apiClient } from '../utils/apiClient';
 
 export interface Trip {
   id: string;
@@ -31,11 +32,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
 
   const handleDeleteTrip = async (tripId: string) => {
     try {
-      const token = localStorage.getItem('budgetcontrol_session_token');
-      const response = await fetch(`/api/trips/${tripId}`, {
-        method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      });
+      const response = await apiClient.delete(`/api/trips/${tripId}`);
       const json = await response.json();
       if (json.status === 'success') {
         fetchTrips();
@@ -219,10 +216,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
   const fetchTrips = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('budgetcontrol_session_token');
-      const response = await fetch('/api/trips', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      });
+      const response = await apiClient.get('/api/trips');
       const json = await response.json();
       if (json.status === 'success') {
         setTrips(json.data);
@@ -270,15 +264,7 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         image_url: imageUrl,
       };
 
-      const token = localStorage.getItem('budgetcontrol_session_token');
-      const response = await fetch('/api/trips', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await apiClient.post('/api/trips', payload);
 
       const json = await response.json();
       if (json.status === 'success') {
