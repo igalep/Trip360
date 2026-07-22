@@ -3,6 +3,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { db } from '../db';
 import { CreateTripSchema } from '../schemas/trip.schema';
 import { validateRequest } from '../middlewares/validation.middleware';
+import { requireAuth } from '../middlewares/auth.middleware';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
@@ -44,24 +45,28 @@ const fetchDestinationImage = async (destination: string): Promise<string> => {
   return getDestinationImage(destination);
 };
 
-// GET /api/trips - List all trips with total spent
-router.get('/', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+// GET /api/trips - List all trips owned by the authenticated user
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const result = await db.execute(`
-      SELECT 
-        id, 
-        user_id,
-        name, 
-        destination, 
-        start_date, 
-        end_date, 
-        nights, 
-        base_currency, 
-        budget_limit, 
-        image_url,
-        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expenses.trip_id = trips.id) as total_spent
-      FROM trips
-    `);
+    const result = await db.execute({
+      sql: `
+        SELECT 
+          id, 
+          user_id,
+          name, 
+          destination, 
+          start_date, 
+          end_date, 
+          nights, 
+          base_currency, 
+          budget_limit, 
+          image_url,
+          (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expenses.trip_id = trips.id) as total_spent
+        FROM trips
+        WHERE user_id = ?
+      `,
+      args: [req.userId || ''],
+    });
     
     res.json({
       status: 'success',
@@ -72,24 +77,24 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction): Promis
   }
 });
 
-// GET /api/trips/:id - Retrieve trip details with categories and expenses (supports ID, Name, or Slug)
-router.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// GET /api/trips/:id - Retrieve trip details with categories and expenses (requires auth & ownership)
+router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const identifier = String(id).trim();
     const decodedIdentifier = decodeURIComponent(identifier);
     
     const tripResult = await db.execute({
-      sql: `SELECT id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url 
+      sql: `SELECT id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url, user_id
             FROM trips 
-            WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
-      args: [identifier, decodedIdentifier, decodedIdentifier],
+            WHERE (id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)) AND user_id = ?`,
+      args: [identifier, decodedIdentifier, decodedIdentifier, req.userId || ''],
     });
     
     if (tripResult.rows.length === 0) {
       res.status(404).json({
         status: 'error',
-        message: 'Trip not found',
+        message: 'Trip not found or unauthorized access',
       });
       return;
     }
@@ -126,11 +131,11 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
   }
 });
 
-// POST /api/trips - Create new trip & seed default categories
-router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// POST /api/trips - Create new trip & seed default categories (requires auth)
+router.post('/', requireAuth, validateRequest({ body: CreateTripSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, destination, start_date, end_date, budget_limit, base_currency, image_url } = req.body;
-    const userIdVal = req.userId || req.body.user_id || null;
+    const userIdVal = req.userId;
     
     const id = crypto.randomUUID();
     const startDateObj = new Date(start_date);
@@ -188,29 +193,29 @@ router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Reques
   }
 });
 
-// POST /api/trips/:id/categories - Create custom category/section
+// POST /api/trips/:id/categories - Create custom category/section (requires auth)
 const CreateCategorySchema = z.object({
   name: z.string().min(1, 'Category name is required'),
   icon: z.string().min(1, 'Category icon is required'),
 });
 
-router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/:id/categories', requireAuth, validateRequest({ body: CreateCategorySchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, icon } = req.body;
     const identifier = String(id).trim();
     const decodedIdentifier = decodeURIComponent(identifier);
     
-    // Verify trip exists by ID, Name, or Slug
+    // Verify trip exists and belongs to user
     const tripResult = await db.execute({
-      sql: `SELECT id FROM trips WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
-      args: [identifier, decodedIdentifier, decodedIdentifier],
+      sql: `SELECT id FROM trips WHERE (id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)) AND user_id = ?`,
+      args: [identifier, decodedIdentifier, decodedIdentifier, req.userId || ''],
     });
     
     if (tripResult.rows.length === 0) {
       res.status(404).json({
         status: 'error',
-        message: 'Trip not found',
+        message: 'Trip not found or unauthorized access',
       });
       return;
     }
@@ -239,23 +244,23 @@ router.post('/:id/categories', validateRequest({ body: CreateCategorySchema }), 
   }
 });
 
-// DELETE /api/trips/:id - Delete a trip and its categories/expenses
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// DELETE /api/trips/:id - Delete a trip (requires auth & ownership)
+router.delete('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const identifier = String(id).trim();
     const decodedIdentifier = decodeURIComponent(identifier);
     
-    // Verify trip exists
+    // Verify trip exists and belongs to user
     const tripResult = await db.execute({
-      sql: `SELECT id FROM trips WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)`,
-      args: [identifier, decodedIdentifier, decodedIdentifier],
+      sql: `SELECT id FROM trips WHERE (id = ? OR LOWER(name) = LOWER(?) OR LOWER(REPLACE(name, ' ', '-')) = LOWER(?)) AND user_id = ?`,
+      args: [identifier, decodedIdentifier, decodedIdentifier, req.userId || ''],
     });
     
     if (tripResult.rows.length === 0) {
       res.status(404).json({
         status: 'error',
-        message: 'Trip not found',
+        message: 'Trip not found or unauthorized access',
       });
       return;
     }

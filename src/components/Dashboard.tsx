@@ -31,8 +31,10 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
 
   const handleDeleteTrip = async (tripId: string) => {
     try {
+      const token = localStorage.getItem('budgetcontrol_session_token');
       const response = await fetch(`/api/trips/${tripId}`, {
         method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
       const json = await response.json();
       if (json.status === 'success') {
@@ -217,7 +219,10 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
   const fetchTrips = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/trips');
+      const token = localStorage.getItem('budgetcontrol_session_token');
+      const response = await fetch('/api/trips', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       const json = await response.json();
       if (json.status === 'success') {
         setTrips(json.data);
@@ -265,9 +270,13 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
         image_url: imageUrl,
       };
 
+      const token = localStorage.getItem('budgetcontrol_session_token');
       const response = await fetch('/api/trips', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

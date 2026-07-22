@@ -1,17 +1,47 @@
-import { describe, expect, it, beforeAll, beforeEach } from '@jest/globals';
+import { describe, expect, it, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import app from '../../src/server/server';
 import { db } from '../../src/server/db';
 import { initLoaders } from '../../src/server/loaders';
+import { hashPasswordInBrowser } from '../../src/utils/crypto';
 
 describe('Expenses & Categories Routes API', () => {
+  const testUser = {
+    email: `test_expenses_${Date.now()}@example.com`,
+    rawPassword: 'Password123!',
+    name: 'Expenses Tester',
+  };
+  let sessionToken = '';
+  let userId = '';
+
   beforeAll(async () => {
     await initLoaders({ app });
     // Run schema.sql to ensure test DB structure is clean
     const schemaSql = readFileSync(join(process.cwd(), 'schema.sql'), 'utf8');
     await db.executeMultiple(schemaSql);
+
+    // Register a test user
+    const preHashedPassword = await hashPasswordInBrowser(testUser.rawPassword, testUser.email.toLowerCase());
+    const regResponse = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: testUser.email,
+        password: preHashedPassword,
+        name: testUser.name,
+      });
+    
+    sessionToken = regResponse.body.data.token;
+    userId = regResponse.body.data.user.id;
+  });
+
+  afterAll(async () => {
+    // Cleanup test user
+    await db.execute({
+      sql: 'DELETE FROM users WHERE email = ?',
+      args: [testUser.email.toLowerCase()],
+    });
   });
 
   beforeEach(async () => {
@@ -20,10 +50,10 @@ describe('Expenses & Categories Routes API', () => {
     await db.execute('DELETE FROM categories');
     await db.execute('DELETE FROM trips');
 
-    // Seed a trip and its categories for the tests
+    // Seed a trip and its categories for the tests (linked to test user)
     await db.execute({
-      sql: 'INSERT INTO trips (id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: ['trip-1', 'Baku Summer', 'Baku', '2026-08-01', '2026-08-08', 7, 'USD', 1500],
+      sql: 'INSERT INTO trips (id, user_id, name, destination, start_date, end_date, nights, base_currency, budget_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: ['trip-1', userId, 'Baku Summer', 'Baku', '2026-08-01', '2026-08-08', 7, 'USD', 1500],
     });
 
     await db.execute({
@@ -45,7 +75,9 @@ describe('Expenses & Categories Routes API', () => {
         args: ['exp-1', 'trip-1', 'cat-flight', 350.0, 350.0, 'USD', 1.0, 'card', 'Flight to Baku', '2026-08-01'],
       });
 
-      const response = await request(app).get('/api/trips/trip-1');
+      const response = await request(app)
+        .get('/api/trips/trip-1')
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.status).toBe('success');
@@ -56,7 +88,9 @@ describe('Expenses & Categories Routes API', () => {
     });
 
     it('should return 404 if trip is not found', async () => {
-      const response = await request(app).get('/api/trips/trip-nonexistent');
+      const response = await request(app)
+        .get('/api/trips/trip-nonexistent')
+        .set('Authorization', `Bearer ${sessionToken}`);
       expect(response.status).toBe(404);
     });
   });
