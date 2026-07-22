@@ -1,5 +1,13 @@
 # Release History
 
+## [v0.0.101] - 2026-07-23
+
+- Trip Management 360 Alignment: Refocused platform mission around 360° travel lifecycle (Phase 1: Budget Management).
+- Turso Cloud Integration: Enforced remote Turso Cloud database connection exclusively with zero downtime schema auto-migrations.
+- Country Search Support: Expanded location geocoding autocomplete to support searching by country (e.g., Montenegro) in addition to cities.
+- Profile Dropdown Menu: Replaced immediate avatar logout with interactive profile dropdown showing user details and explicit logout.
+- UI Version Indicators: Integrated version indicator footers in both AuthView and Main Dashboard.
+
 ## [v0.0.1] - 2026-07-23
 
 ### Initial Release Highlights

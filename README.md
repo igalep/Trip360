@@ -1,6 +1,6 @@
-# BudgetControl - Trip Management 360 `v0.0.1`
+# BudgetControl - Trip Management 360 `v0.0.101`
 
-**Version:** `v0.0.1`  
+**Version:** `v0.0.101`  
 **Core Purpose:** Complete end-to-end **Trip Management 360** platform covering Planning, Execution, and Budget Management.  
 **Current Milestone:** **Phase 1: Budget Management**.
 
