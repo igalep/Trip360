@@ -1,3 +1,4 @@
+import '../types/express.d.ts';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { db } from '../db';
 import { CreateTripSchema } from '../schemas/trip.schema';
@@ -49,6 +50,7 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction): Promis
     const result = await db.execute(`
       SELECT 
         id, 
+        user_id,
         name, 
         destination, 
         start_date, 
@@ -128,6 +130,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
 router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, destination, start_date, end_date, budget_limit, base_currency, image_url } = req.body;
+    const userIdVal = req.userId || req.body.user_id || null;
     
     const id = crypto.randomUUID();
     const startDateObj = new Date(start_date);
@@ -152,9 +155,9 @@ router.post('/', validateRequest({ body: CreateTripSchema }), async (req: Reques
     // Build batch operations
     const statements = [
       {
-        sql: `INSERT INTO trips (id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [id, name, destination, start_date, end_date, nights, baseCurrencyVal, budgetLimitVal, imageUrl],
+        sql: `INSERT INTO trips (id, user_id, name, destination, start_date, end_date, nights, base_currency, budget_limit, image_url) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [id, userIdVal, name, destination, start_date, end_date, nights, baseCurrencyVal, budgetLimitVal, imageUrl],
       },
       ...defaultCategories.map((cat) => ({
         sql: `INSERT INTO categories (id, trip_id, name, icon, group_name, is_default) 

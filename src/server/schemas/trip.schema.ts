@@ -8,6 +8,7 @@ export const CreateTripSchema = z.object({
   budget_limit: z.number().positive().optional(),
   base_currency: z.string().length(3).optional().default('USD'),
   image_url: z.string().optional(),
+  user_id: z.string().optional(),
 });
 
 export type CreateTripInput = z.infer<typeof CreateTripSchema>;
