@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
 import { EXTERNAL_APIS } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
+import { APP_VERSION } from '../version';
 
 export interface Trip {
   id: string;
@@ -799,6 +800,11 @@ export default function Dashboard({ onSelectTrip }: DashboardProps) {
           </div>
         </>
       )}
+
+      {/* Footer */}
+      <footer className="w-full py-6 text-center text-xs text-zinc-600 font-semibold tracking-widest uppercase border-t border-zinc-900 mt-auto" data-testid="dashboard-version-indicator">
+        &copy; BudgetControl 2026 &bull; v{APP_VERSION}
+      </footer>
     </div>
   );
 }

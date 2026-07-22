@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { APP_VERSION } from '../../version';
 
 export const AuthView: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -170,8 +171,8 @@ export const AuthView: React.FC = () => {
         </form>
       </div>
 
-      <footer className="mt-8 text-center text-xs text-zinc-600 font-semibold tracking-widest uppercase">
-        &copy; BudgetControl 2026
+      <footer className="mt-8 text-center text-xs text-zinc-600 font-semibold tracking-widest uppercase" data-testid="auth-version-indicator">
+        &copy; BudgetControl 2026 &bull; v{APP_VERSION}
       </footer>
     </div>
   );

@@ -4,9 +4,10 @@ This document defines the architecture, standards, and mandates for the BudgetCo
 
 ## 🚀 Project Overview
 
-High-performance, full-stack personal financial management with a minimalist UI and unified Turso/libSQL architecture.
+High-performance, full-stack **Trip Management 360** platform covering Planning, Execution, and Budget Management across Web & Mobile.
 
-- **Core Goal:** Real-time personal finance tracking across Web & Android.
+- **Product Vision:** Complete 360° travel lifecycle system (Planning, Execution, Budget Management).
+- **Current Phase:** **Phase 1: Budget Management** (Multi-currency ledger, live exchange rates, category budget matrices, user auth).
 - **Key Tech:** React 19, Node.js (Express), Turso (libSQL), Zod, Gemini AI, Capacitor (Mobile).
 
 ## ⚙️ Key Commands
@@ -58,4 +59,3 @@ High-performance, full-stack personal financial management with a minimalist UI 
   - **Frontend UI Tests:** Located under `/tests/ui/`. Test files should end with `.test.tsx` (using JSDOM environment).
 - **Test Database Isolation:** Tests must use a separate SQLite test database file (configured via environment variable `TURSO_DATABASE_URL=file:test.db`).
 - **Sequential Execution:** Tests interacting with the database must run sequentially (using `--runInBand` flag) to prevent SQLite concurrency lock issues.
-
