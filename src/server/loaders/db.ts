@@ -5,9 +5,9 @@ import { logger } from '../../utils/logger';
 
 export default async function dbLoader() {
   try {
-    // Verify SQLite/Turso database connection
+    // Verify Turso Cloud database connection
     await db.execute('SELECT 1');
-    logger.info('Database loader: Connection verified successfully.');
+    logger.info('Database loader: Turso Cloud database connection verified successfully.');
 
     // 1. Ensure users & sessions tables exist
     const checkTable = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");

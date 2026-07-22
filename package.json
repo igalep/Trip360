@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "db:init": "npx tsx src/server/db-init.ts",
-    "test": "TURSO_DATABASE_URL=file:test.db jest --runInBand",
+    "test": "jest --runInBand",
     "server": "nodemon --exec \"npx tsx\" src/server/index.ts"
   },
   "dependencies": {
