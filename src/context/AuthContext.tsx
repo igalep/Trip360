@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { hashPassword } from '../utils/crypto';
 import { logger } from '../utils/logger';
+import { apiClient } from '../utils/apiClient';
 
 export interface User {
   id: string;
@@ -31,9 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/api/auth/me');
       const json = await response.json();
       if (json.status === 'success' && json.data?.user) {
         setUser(json.data.user);
@@ -68,11 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const trimmedEmail = email.trim().toLowerCase();
     const hashedPassword = await hashPassword(rawPassword, trimmedEmail);
 
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: trimmedEmail, password: hashedPassword }),
-    });
+    const response = await apiClient.post('/api/auth/login', { email: trimmedEmail, password: hashedPassword });
 
     const json = await response.json();
     if (json.status === 'success' && json.data?.token) {
@@ -87,11 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const trimmedEmail = email.trim().toLowerCase();
     const hashedPassword = await hashPassword(rawPassword, trimmedEmail);
 
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: trimmedEmail, password: hashedPassword, name: name.trim() }),
-    });
+    const response = await apiClient.post('/api/auth/register', { email: trimmedEmail, password: hashedPassword, name: name.trim() });
 
     const json = await response.json();
     if (json.status === 'success' && json.data?.token) {
@@ -103,16 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const token = localStorage.getItem('budgetcontrol_session_token');
-    if (token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-      } catch (error) {
-        logger.error('Logout error:', error);
-      }
+    try {
+      await apiClient.post('/api/auth/logout');
+    } catch (error) {
+      logger.error('Logout error:', error);
     }
     localStorage.removeItem('budgetcontrol_session_token');
     setUser(null);
