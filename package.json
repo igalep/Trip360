@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx tsx src/server/index.ts & vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && esbuild api/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=api/index.js --external:@libsql/client --external:bcryptjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "db:init": "npx tsx src/server/db-init.ts",
@@ -33,6 +33,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.1",
     "@vitejs/plugin-react": "^6.0.3",
+    "esbuild": "^0.28.1",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "nodemon": "^3.1.14",
